@@ -5,9 +5,11 @@ description = "Add your description here"
 authors = [
     { name = "岸本ニコ", email = "kishimotonico@gmail.com" }
 ]
-dependencies = []
+dependencies = [
+    "pydantic>=2.9.2",
+]
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.11"
 
 [project.scripts]
 hello = "bacli_py:hello"
