@@ -44,9 +44,9 @@ class TestUpdateFromResponse:
         response = httpx.Response(
             status_code=200,
             headers={
-                "X-RateLimit-Limit": "100",
-                "X-RateLimit-Remaining": "50",
-                "X-RateLimit-Reset": "1700000000",
+                "x-ratelimit-limit": "100",
+                "x-ratelimit-remaining": "50",
+                "x-ratelimit-reset": "1700000000",
             },
         )
         handler.update_from_response(response)
@@ -63,6 +63,7 @@ class TestUpdateFromResponse:
         response = httpx.Response(status_code=200)
         handler.update_from_response(response)
 
+        # Without rate limit headers, returns None
         assert handler.last_rate_limit is None
 
 
@@ -155,9 +156,9 @@ class TestGetRetryDelay:
         response = httpx.Response(
             status_code=200,
             headers={
-                "X-RateLimit-Limit": "100",
-                "X-RateLimit-Remaining": "0",
-                "X-RateLimit-Reset": str(int(reset_time)),
+                "x-ratelimit-limit": "100",
+                "x-ratelimit-remaining": "0",
+                "x-ratelimit-reset": str(int(reset_time)),
             },
         )
         handler.update_from_response(response)

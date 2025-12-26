@@ -39,11 +39,18 @@ class RateLimitInfo(BaseModel):
     @classmethod
     def from_headers(cls, headers: dict[str, str]) -> RateLimitInfo | None:
         """Parse rate limit info from response headers."""
+        # Normalize header keys to lowercase for case-insensitive lookup
+        lower_headers = {k.lower(): v for k, v in headers.items()}
+
+        # Check if rate limit headers exist
+        if "x-ratelimit-limit" not in lower_headers:
+            return None
+
         try:
             return cls(
-                limit=int(headers.get("X-RateLimit-Limit", 0)),
-                remaining=int(headers.get("X-RateLimit-Remaining", 0)),
-                reset=int(headers.get("X-RateLimit-Reset", 0)),
+                limit=int(lower_headers.get("x-ratelimit-limit", 0)),
+                remaining=int(lower_headers.get("x-ratelimit-remaining", 0)),
+                reset=int(lower_headers.get("x-ratelimit-reset", 0)),
             )
         except (ValueError, TypeError):
             return None
