@@ -5,6 +5,7 @@ from __future__ import annotations
 import typer
 
 from bacli_py.cli.auth import app as auth_app
+from bacli_py.cli.project import app as project_app
 
 app = typer.Typer(
     name="bacli",
@@ -13,6 +14,7 @@ app = typer.Typer(
 )
 
 app.add_typer(auth_app, name="auth")
+app.add_typer(project_app, name="project")
 
 
 @app.callback()
