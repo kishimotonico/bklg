@@ -18,9 +18,20 @@ requires-python = ">= 3.11"
 [project.scripts]
 bacli = "bacli_py.main:app"
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-httpx>=0.35.0",
+    "pytest-cov>=6.0.0",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
