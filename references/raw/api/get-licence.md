@@ -1,0 +1,72 @@
+   
+# ライセンス情報の取得
+
+ライセンスの情報を取得します。
+
+## 実行可能な権限
+
+```
+すべての権限
+
+```
+## メソッド
+
+```
+GET
+
+```
+## URL
+
+```
+/api/v2/space/licence
+
+```
+## レスポンス例
+
+### ステータスライン / レスポンスヘッダ
+
+```
+HTTP/1.1 200 OK
+Content-Type:application/json;charset=utf-8
+
+```
+### レスポンスボディ
+
+```
+{
+    "active": true,
+    "attachmentLimit": 0,
+    "attachmentLimitPerFile": 10485760,
+    "attachmentNumLimit": 50,
+    "attribute": true,
+    "attributeLimit": 100,
+    "burndown": true,
+    "commentLimit": 0,
+    "componentLimit": 0,
+    "fileSharing": true,
+    "gantt": true,
+    "git": true,
+    "issueLimit": 0,
+    "licenceTypeId": 51,
+    "limitDate": "2019-01-02T15:00:00Z",
+    "nulabAccount": true,
+    "parentChildIssue": true,
+    "postIssueByMail": true,
+    "projectLimit": 0,
+    "pullRequestAttachmentLimitPerFile": 10485760,
+    "pullRequestAttachmentNumLimit": 50,
+    "remoteAddress": true,
+    "remoteAddressLimit": 100,
+    "startedOn": "2018-01-03T15:00:00Z",
+    "storageLimit": 1073741824000,
+    "subversion": true,
+    "subversionExternal": true,
+    "userLimit": 0,
+    "versionLimit": 0,
+    "wikiAttachment": true,
+    "wikiAttachmentLimitPerFile": 10485760,
+    "wikiAttachmentNumLimit": 50
+}
+
+```
+   

@@ -3,9 +3,10 @@
 - agents/
   - claude/: Claudeが出力したドキュメントを格納
   - gemini/: Geminiが出力したドキュメントを格納
--snippets/: バックログのドキュメントをスクレイピングするコードなど
-  - docs/raw/: バックログのドキュメントをMarkdownで保存
-  - docs/all_api.md: バックログのドキュメントを1ファイルにまとめたテキスト
+- snippets/: バックログのドキュメントをスクレイピングするコードなど
+- reference/: バックログのAPIドキュメント
+  - raw/: バックログのドキュメントをMarkdownで保存
+  - all_api.md: バックログのドキュメントを1ファイルにまとめたテキスト
 - src/: ソースコード
 - tests/: テストコード
 
