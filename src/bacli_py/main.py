@@ -14,6 +14,7 @@ from bacli_py.cli.project import app as project_app
 from bacli_py.cli.space import app as space_app
 from bacli_py.cli.user import app as user_app
 from bacli_py.cli.watch import app as watch_app
+from bacli_py.cli.wiki import app as wiki_app
 
 app = typer.Typer(
     name="bacli",
@@ -28,6 +29,7 @@ app.add_typer(user_app, name="user")
 app.add_typer(space_app, name="space")
 app.add_typer(notification_app, name="notification")
 app.add_typer(watch_app, name="watch")
+app.add_typer(wiki_app, name="wiki")
 
 
 @app.callback()
