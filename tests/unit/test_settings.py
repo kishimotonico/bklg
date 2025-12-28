@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from bacli_py.config.settings import Settings, get_config_file, get_settings
+from bklg.config.settings import Settings, get_config_file, get_settings
 
 
 class TestSettings:

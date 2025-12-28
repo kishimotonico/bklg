@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.user import app
-from bacli_py.config.settings import Settings
+from bklg.cli.user import app
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ class TestListUsersCommand:
         sample_users: list[dict[str, Any]],
     ) -> None:
         """Test listing users."""
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -60,7 +60,7 @@ class TestListUsersCommand:
         sample_users: list[dict[str, Any]],
     ) -> None:
         """Test listing users with JSON output."""
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -78,7 +78,7 @@ class TestListUsersCommand:
         configured_settings: Settings,
     ) -> None:
         """Test listing users when none exist."""
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -112,7 +112,7 @@ class TestUserInfoCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test showing current user info."""
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -131,7 +131,7 @@ class TestUserInfoCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test showing user info by ID."""
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -150,7 +150,7 @@ class TestUserInfoCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test showing user info with JSON output."""
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -182,7 +182,7 @@ class TestUserActivityCommand:
             }
         ]
 
-        with patch("bacli_py.cli.user.BacklogClient") as mock_client:
+        with patch("bklg.cli.user.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance

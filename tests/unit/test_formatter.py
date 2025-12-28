@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 import pytest
 from rich.console import Console
 
-from bacli_py.models.issue import Comment, Issue
-from bacli_py.utils.formatter import IssueFormatter
+from bklg.models.issue import Comment, Issue
+from bklg.utils.formatter import IssueFormatter
 
 
 @pytest.fixture

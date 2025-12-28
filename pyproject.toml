@@ -1,5 +1,5 @@
 [project]
-name = "bacli-py"
+name = "bklg"
 version = "0.1.0"
 description = "Add your description here"
 authors = [
@@ -16,7 +16,7 @@ readme = "README.md"
 requires-python = ">= 3.11"
 
 [project.scripts]
-bacli = "bacli_py.main:app"
+bklg = "bklg.main:app"
 
 [project.optional-dependencies]
 test = [
@@ -37,4 +37,4 @@ pythonpath = ["src"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bacli_py"]
+packages = ["src/bklg"]

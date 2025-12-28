@@ -1,4 +1,4 @@
-"""Shared fixtures for bacli-py tests."""
+"""Shared fixtures for bklg-py tests."""
 
 from __future__ import annotations
 
@@ -8,20 +8,20 @@ from typing import Any
 
 import pytest
 
-from bacli_py.config.settings import Settings
-from bacli_py.resolver.cache import ResolverCache
+from bklg.config.settings import Settings
+from bklg.resolver.cache import ResolverCache
 
 
 @pytest.fixture
 def tmp_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Create temporary config directory and patch get_config_dir."""
-    config_dir = tmp_path / ".config" / "bacli"
+    config_dir = tmp_path / ".config" / "bklg"
     config_dir.mkdir(parents=True)
 
     def mock_get_config_dir() -> Path:
         return config_dir
 
-    monkeypatch.setattr("bacli_py.config.settings.get_config_dir", mock_get_config_dir)
+    monkeypatch.setattr("bklg.config.settings.get_config_dir", mock_get_config_dir)
     return config_dir
 
 

@@ -25,7 +25,7 @@ wheels = [
 ]
 
 [[package]]
-name = "bacli-py"
+name = "bklg"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

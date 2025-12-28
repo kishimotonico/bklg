@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.wiki import app
-from bacli_py.config.settings import Settings
+from bklg.cli.wiki import app
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ class TestListWikisCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test listing wiki pages."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -62,7 +62,7 @@ class TestListWikisCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test listing wikis with JSON output."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -81,7 +81,7 @@ class TestListWikisCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test listing wikis when none exist."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -115,7 +115,7 @@ class TestViewWikiCommand:
         sample_wiki: dict[str, Any],
     ) -> None:
         """Test viewing a wiki page."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -134,7 +134,7 @@ class TestViewWikiCommand:
         sample_wiki: dict[str, Any],
     ) -> None:
         """Test viewing wiki with JSON output."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -158,7 +158,7 @@ class TestCreateWikiCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test creating a wiki page."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -184,7 +184,7 @@ class TestUpdateWikiCommand:
         sample_wiki: dict[str, Any],
     ) -> None:
         """Test updating a wiki page."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -218,7 +218,7 @@ class TestDeleteWikiCommand:
         sample_wiki: dict[str, Any],
     ) -> None:
         """Test deleting a wiki page."""
-        with patch("bacli_py.cli.wiki.BacklogClient") as mock_client:
+        with patch("bklg.cli.wiki.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance

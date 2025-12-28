@@ -8,7 +8,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from bacli_py.api.rate_limit import RateLimitHandler
+from bklg.api.rate_limit import RateLimitHandler
 
 
 @pytest.fixture
@@ -185,7 +185,7 @@ class TestWaitForRetry:
     ) -> None:
         """Test that long delays show a message."""
         with patch("time.sleep") as mock_sleep:
-            with patch("bacli_py.api.rate_limit.console.print") as mock_print:
+            with patch("bklg.api.rate_limit.console.print") as mock_print:
                 handler.wait_for_retry(15)
                 mock_sleep.assert_called_once_with(15)
                 mock_print.assert_called_once()

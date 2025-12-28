@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.watch import app
-from bacli_py.config.settings import Settings
+from bklg.cli.watch import app
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ class TestListWatchingsCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test listing watched items."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -62,7 +62,7 @@ class TestListWatchingsCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test listing watchings with JSON output."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -81,7 +81,7 @@ class TestListWatchingsCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test listing watchings when none exist."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -115,7 +115,7 @@ class TestAddWatchingCommand:
         sample_watching: dict[str, Any],
     ) -> None:
         """Test adding a watch."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -134,7 +134,7 @@ class TestAddWatchingCommand:
         sample_watching: dict[str, Any],
     ) -> None:
         """Test adding a watch with note."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -156,7 +156,7 @@ class TestRemoveWatchingCommand:
         configured_settings: Settings,
     ) -> None:
         """Test removing a watch."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -179,7 +179,7 @@ class TestWatchingInfoCommand:
         sample_watching: dict[str, Any],
     ) -> None:
         """Test showing watch info."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -202,7 +202,7 @@ class TestMarkWatchingReadCommand:
         configured_settings: Settings,
     ) -> None:
         """Test marking watch as read."""
-        with patch("bacli_py.cli.watch.BacklogClient") as mock_client:
+        with patch("bklg.cli.watch.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance

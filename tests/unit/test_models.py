@@ -6,20 +6,20 @@ from typing import Any
 
 import pytest
 
-from bacli_py.models.attachment import Attachment, UploadedFile
-from bacli_py.models.common import (
+from bklg.models.attachment import Attachment, UploadedFile
+from bklg.models.common import (
     BacklogError,
     BacklogErrorResponse,
     ErrorCode,
     RateLimitInfo,
 )
-from bacli_py.models.issue import Comment, Issue, IssueUser
-from bacli_py.models.notification import Notification, NotificationCount
-from bacli_py.models.project import IssueType, Priority, Project, Status
-from bacli_py.models.space import DiskUsage, Space, SpaceNotification
-from bacli_py.models.user import User
-from bacli_py.models.watch import Watching, WatchingCount
-from bacli_py.models.wiki import Wiki, WikiTag
+from bklg.models.issue import Comment, Issue, IssueUser
+from bklg.models.notification import Notification, NotificationCount
+from bklg.models.project import IssueType, Priority, Project, Status
+from bklg.models.space import DiskUsage, Space, SpaceNotification
+from bklg.models.user import User
+from bklg.models.watch import Watching, WatchingCount
+from bklg.models.wiki import Wiki, WikiTag
 
 
 class TestBacklogError:

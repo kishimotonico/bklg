@@ -8,9 +8,9 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from bacli_py.api.client import BacklogAPIError, BacklogClient
-from bacli_py.config.settings import Settings
-from bacli_py.models.common import ErrorCode
+from bklg.api.client import BacklogAPIError, BacklogClient
+from bklg.config.settings import Settings
+from bklg.models.common import ErrorCode
 
 
 @pytest.fixture

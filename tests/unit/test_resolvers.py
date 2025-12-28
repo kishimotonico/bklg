@@ -8,14 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bacli_py.models import IssueType, Priority, Project, Status, User
-from bacli_py.resolver.base import ResolverError
-from bacli_py.resolver.cache import ProjectCache, ResolverCache
-from bacli_py.resolver.issue_type import IssueTypeResolver
-from bacli_py.resolver.priority import PriorityResolver
-from bacli_py.resolver.project import ProjectResolver
-from bacli_py.resolver.status import StatusResolver
-from bacli_py.resolver.user import UserResolver
+from bklg.models import IssueType, Priority, Project, Status, User
+from bklg.resolver.base import ResolverError
+from bklg.resolver.cache import ProjectCache, ResolverCache
+from bklg.resolver.issue_type import IssueTypeResolver
+from bklg.resolver.priority import PriorityResolver
+from bklg.resolver.project import ProjectResolver
+from bklg.resolver.status import StatusResolver
+from bklg.resolver.user import UserResolver
 
 
 @pytest.fixture

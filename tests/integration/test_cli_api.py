@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.api import app
-from bacli_py.config.settings import Settings
+from bklg.cli.api import app
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ class TestApiCallCommand:
         sample_users: list[dict[str, Any]],
     ) -> None:
         """Test GET request."""
-        with patch("bacli_py.cli.api.BacklogClient") as mock_client:
+        with patch("bklg.cli.api.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -59,7 +59,7 @@ class TestApiCallCommand:
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test GET request with query parameters."""
-        with patch("bacli_py.cli.api.BacklogClient") as mock_client:
+        with patch("bklg.cli.api.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -80,7 +80,7 @@ class TestApiCallCommand:
         sample_issue: dict[str, Any],
     ) -> None:
         """Test POST request."""
-        with patch("bacli_py.cli.api.BacklogClient") as mock_client:
+        with patch("bklg.cli.api.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -100,7 +100,7 @@ class TestApiCallCommand:
         configured_settings: Settings,
     ) -> None:
         """Test DELETE request."""
-        with patch("bacli_py.cli.api.BacklogClient") as mock_client:
+        with patch("bklg.cli.api.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance

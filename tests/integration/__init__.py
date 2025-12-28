@@ -1,1 +1,1 @@
-"""Integration tests for bacli-py."""
+"""Integration tests for bklg-py."""

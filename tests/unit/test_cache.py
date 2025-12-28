@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from bacli_py.resolver.cache import (
+from bklg.resolver.cache import (
     CACHE_TTL_SECONDS,
     CacheData,
     ProjectCache,

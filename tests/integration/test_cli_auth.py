@@ -9,8 +9,8 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.auth import app
-from bacli_py.config.settings import Settings
+from bklg.cli.auth import app
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ class TestLoginCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test successful login."""
-        with patch("bacli_py.cli.auth.BacklogClient") as mock_client:
+        with patch("bklg.cli.auth.BacklogClient") as mock_client:
             mock_client.return_value.__enter__.return_value.get_myself.return_value = (
                 sample_user
             )
@@ -49,10 +49,10 @@ class TestLoginCommand:
         tmp_config_dir: Path,
     ) -> None:
         """Test login with invalid credentials."""
-        from bacli_py.api.client import BacklogAPIError
-        from bacli_py.models.common import ErrorCode
+        from bklg.api.client import BacklogAPIError
+        from bklg.models.common import ErrorCode
 
-        with patch("bacli_py.cli.auth.BacklogClient") as mock_client:
+        with patch("bklg.cli.auth.BacklogClient") as mock_client:
             mock_client.return_value.__enter__.return_value.get_myself.side_effect = (
                 BacklogAPIError("Auth failed", code=ErrorCode.AUTHENTICATION_ERROR)
             )
@@ -72,7 +72,7 @@ class TestLoginCommand:
         sample_user: dict[str, Any],
     ) -> None:
         """Test URL normalization (adding https://, removing trailing slash)."""
-        with patch("bacli_py.cli.auth.BacklogClient") as mock_client:
+        with patch("bklg.cli.auth.BacklogClient") as mock_client:
             mock_client.return_value.__enter__.return_value.get_myself.return_value = (
                 sample_user
             )
@@ -136,7 +136,7 @@ class TestStatusCommand:
         )
         settings.save()
 
-        with patch("bacli_py.cli.auth.BacklogClient") as mock_client:
+        with patch("bklg.cli.auth.BacklogClient") as mock_client:
             mock_instance = mock_client.return_value.__enter__.return_value
             mock_instance.get_myself.return_value = sample_user
             mock_instance.rate_limit_handler.last_rate_limit = None
@@ -164,8 +164,8 @@ class TestStatusCommand:
         tmp_config_dir: Path,
     ) -> None:
         """Test status when authentication has expired."""
-        from bacli_py.api.client import BacklogAPIError
-        from bacli_py.models.common import ErrorCode
+        from bklg.api.client import BacklogAPIError
+        from bklg.models.common import ErrorCode
 
         settings = Settings(
             space_url="https://test.backlog.com",
@@ -173,7 +173,7 @@ class TestStatusCommand:
         )
         settings.save()
 
-        with patch("bacli_py.cli.auth.BacklogClient") as mock_client:
+        with patch("bklg.cli.auth.BacklogClient") as mock_client:
             mock_client.return_value.__enter__.return_value.get_myself.side_effect = (
                 BacklogAPIError("Auth failed", code=ErrorCode.AUTHENTICATION_ERROR)
             )

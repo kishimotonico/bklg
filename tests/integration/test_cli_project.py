@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.project import app
-from bacli_py.config.settings import Settings
+from bklg.cli.project import app
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ class TestListProjectsCommand:
         sample_projects: list[dict[str, Any]],
     ) -> None:
         """Test listing projects."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -60,7 +60,7 @@ class TestListProjectsCommand:
         sample_projects: list[dict[str, Any]],
     ) -> None:
         """Test listing projects with JSON output."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -78,7 +78,7 @@ class TestListProjectsCommand:
         configured_settings: Settings,
     ) -> None:
         """Test listing projects when none exist."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -112,7 +112,7 @@ class TestProjectInfoCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test showing project info."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -132,7 +132,7 @@ class TestProjectInfoCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test showing project info with JSON output."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -151,7 +151,7 @@ class TestProjectInfoCommand:
         sample_projects: list[dict[str, Any]],
     ) -> None:
         """Test showing info for non-existent project."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -175,7 +175,7 @@ class TestListIssueTypesCommand:
         sample_issue_types: list[dict[str, Any]],
     ) -> None:
         """Test listing issue types."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -201,7 +201,7 @@ class TestListIssueTypesCommand:
         sample_issue_types: list[dict[str, Any]],
     ) -> None:
         """Test listing issue types with JSON output."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -229,7 +229,7 @@ class TestListStatusesCommand:
         sample_statuses: list[dict[str, Any]],
     ) -> None:
         """Test listing statuses."""
-        with patch("bacli_py.cli.project.BacklogClient") as mock_client:
+        with patch("bklg.cli.project.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance

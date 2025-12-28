@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from bacli_py.cli.issue import app, parse_issue_identifier
-from bacli_py.config.settings import Settings
+from bklg.cli.issue import app, parse_issue_identifier
+from bklg.config.settings import Settings
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ class TestListIssuesCommand:
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test listing issues."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -93,7 +93,7 @@ class TestListIssuesCommand:
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test listing issues with project filter."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -118,7 +118,7 @@ class TestListIssuesCommand:
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test listing issues assigned to @me."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -143,7 +143,7 @@ class TestListIssuesCommand:
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test listing issues with JSON output."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -166,7 +166,7 @@ class TestListIssuesCommand:
         sample_project: dict[str, Any],
     ) -> None:
         """Test listing issues when none exist."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -204,7 +204,7 @@ class TestViewIssueCommand:
         sample_issue: dict[str, Any],
     ) -> None:
         """Test viewing issue details."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -225,7 +225,7 @@ class TestViewIssueCommand:
         sample_comment: dict[str, Any],
     ) -> None:
         """Test viewing issue with comments."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -249,7 +249,7 @@ class TestViewIssueCommand:
         sample_issue: dict[str, Any],
     ) -> None:
         """Test viewing issue with JSON output."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -268,7 +268,7 @@ class TestViewIssueCommand:
         sample_issue: dict[str, Any],
     ) -> None:
         """Test viewing issue from URL."""
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
@@ -289,10 +289,10 @@ class TestViewIssueCommand:
         configured_settings: Settings,
     ) -> None:
         """Test viewing non-existent issue."""
-        from bacli_py.api.client import BacklogAPIError
-        from bacli_py.models.common import ErrorCode
+        from bklg.api.client import BacklogAPIError
+        from bklg.models.common import ErrorCode
 
-        with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
             mock_instance = MagicMock()
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
