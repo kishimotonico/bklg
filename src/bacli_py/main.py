@@ -6,6 +6,7 @@ from typing import Annotated
 
 import typer
 
+from bacli_py.cli.api import app as api_app
 from bacli_py.cli.auth import app as auth_app
 from bacli_py.cli.context import OutputContext
 from bacli_py.cli.issue import app as issue_app
@@ -30,6 +31,7 @@ app.add_typer(space_app, name="space")
 app.add_typer(notification_app, name="notification")
 app.add_typer(watch_app, name="watch")
 app.add_typer(wiki_app, name="wiki")
+app.add_typer(api_app, name="api")
 
 
 @app.callback()
