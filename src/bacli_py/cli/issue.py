@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from bacli_py.api.client import BacklogAPIError, BacklogClient
 from bacli_py.config.settings import get_settings
+from bacli_py.models.attachment import Attachment
 from bacli_py.models.issue import Comment, Issue
 from bacli_py.resolver.base import ResolverError
 from bacli_py.resolver.cache import ResolverCache
@@ -22,7 +25,9 @@ from bacli_py.utils.formatter import IssueFormatter
 
 app = typer.Typer(help="Issue commands")
 comment_app = typer.Typer(help="Comment commands")
+attachment_app = typer.Typer(help="Attachment commands")
 app.add_typer(comment_app, name="comment")
+app.add_typer(attachment_app, name="attachment")
 
 console = Console()
 err_console = Console(stderr=True)
@@ -573,6 +578,422 @@ def delete_issue(
     except BacklogAPIError as e:
         if e.is_not_found():
             err_console.print(f"[red]Issue '{issue_key}' not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+# Comment subcommands
+
+
+@comment_app.command("list")
+def list_comments(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Number of comments to fetch"),
+    ] = 20,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", "-j", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """List comments on an issue."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            data = client.get(
+                f"/issues/{issue_key}/comments",
+                params={"count": limit, "order": "asc"},
+            )
+            comments = [Comment.model_validate(c) for c in data]  # type: ignore[union-attr]
+
+        if json_output:
+            import json
+
+            out = [c.model_dump(by_alias=True, mode="json") for c in comments]
+            console.print_json(json.dumps(out, ensure_ascii=False, default=str))
+            return
+
+        if not comments:
+            console.print(f"[yellow]No comments on {issue_key}.[/yellow]")
+            return
+
+        formatter = IssueFormatter(console)
+        formatter.format_comments(comments)
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print(f"[red]Issue '{issue_key}' not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+@comment_app.command("add")
+def add_comment(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    content: Annotated[
+        str,
+        typer.Argument(help="Comment content"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", "-j", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """Add a comment to an issue."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            result = client.post(
+                f"/issues/{issue_key}/comments",
+                data={"content": content},
+            )
+            comment = Comment.model_validate(result)
+
+        if json_output:
+            import json
+
+            out = comment.model_dump(by_alias=True, mode="json")
+            console.print_json(json.dumps(out, ensure_ascii=False, default=str))
+            return
+
+        console.print(f"[green]Added comment to {issue_key}[/green]")
+        console.print(f"  Comment ID: {comment.id}")
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print(f"[red]Issue '{issue_key}' not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+@comment_app.command("update")
+def update_comment(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    comment_id: Annotated[
+        int,
+        typer.Argument(help="Comment ID"),
+    ],
+    content: Annotated[
+        str,
+        typer.Argument(help="New comment content"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", "-j", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """Update a comment."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            result = client.patch(
+                f"/issues/{issue_key}/comments/{comment_id}",
+                data={"content": content},
+            )
+            comment = Comment.model_validate(result)
+
+        if json_output:
+            import json
+
+            out = comment.model_dump(by_alias=True, mode="json")
+            console.print_json(json.dumps(out, ensure_ascii=False, default=str))
+            return
+
+        console.print(f"[green]Updated comment {comment_id} on {issue_key}[/green]")
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print("[red]Comment not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+@comment_app.command("delete")
+def delete_comment(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    comment_id: Annotated[
+        int,
+        typer.Argument(help="Comment ID"),
+    ],
+    force: Annotated[
+        bool,
+        typer.Option("--force", "-f", help="Skip confirmation"),
+    ] = False,
+) -> None:
+    """Delete a comment."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    if not force:
+        confirm = typer.confirm(f"Delete comment {comment_id} on {issue_key}?")
+        if not confirm:
+            console.print("[yellow]Cancelled.[/yellow]")
+            raise typer.Abort()
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            client.delete(f"/issues/{issue_key}/comments/{comment_id}")
+
+        console.print(f"[green]Deleted comment {comment_id} on {issue_key}[/green]")
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print("[red]Comment not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+# Attachment subcommands
+
+
+@attachment_app.command("list")
+def list_attachments(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", "-j", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """List attachments on an issue."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            data = client.get(f"/issues/{issue_key}/attachments")
+            attachments = [Attachment.model_validate(a) for a in data]  # type: ignore[union-attr]
+
+        if json_output:
+            import json
+
+            out = [a.model_dump(by_alias=True, mode="json") for a in attachments]
+            console.print_json(json.dumps(out, ensure_ascii=False, default=str))
+            return
+
+        if not attachments:
+            console.print(f"[yellow]No attachments on {issue_key}.[/yellow]")
+            return
+
+        table = Table(title=f"Attachments: {issue_key}")
+        table.add_column("ID", style="cyan")
+        table.add_column("Name")
+        table.add_column("Size", justify="right")
+        table.add_column("Created By")
+
+        for att in attachments:
+            size_str = _format_size(att.size)
+            created_by = att.created_user.name if att.created_user else "-"
+            table.add_row(str(att.id), att.name, size_str, created_by)
+
+        console.print(table)
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print(f"[red]Issue '{issue_key}' not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+def _format_size(size: int) -> str:
+    """Format file size in human readable format."""
+    for unit in ["B", "KB", "MB", "GB"]:
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+        size /= 1024  # type: ignore[assignment]
+    return f"{size:.1f} TB"
+
+
+@attachment_app.command("download")
+def download_attachment(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    attachment_id: Annotated[
+        int,
+        typer.Argument(help="Attachment ID"),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Output path (file or directory)"),
+    ] = None,
+) -> None:
+    """Download an attachment."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            output_path = output or Path(".")
+            _, filename = client.download_file(
+                f"/issues/{issue_key}/attachments/{attachment_id}",
+                output_path=output_path,
+            )
+
+        if output_path.is_dir():
+            saved_path = output_path / filename
+        else:
+            saved_path = output_path
+
+        console.print(f"[green]Downloaded: {saved_path}[/green]")
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print("[red]Attachment not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+@attachment_app.command("upload")
+def upload_attachment(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    file_path: Annotated[
+        Path,
+        typer.Argument(help="File to upload", exists=True),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", "-j", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """Upload an attachment to an issue."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            # First upload the file
+            upload_result = client.upload_file(file_path)
+            attachment_id = upload_result["id"]
+
+            # Then attach it to the issue using PATCH
+            # The API requires attachmentId[] parameter
+            result = client.patch(
+                f"/issues/{issue_key}",
+                data={"attachmentId[]": attachment_id},
+            )
+            issue = Issue.model_validate(result)
+
+        if json_output:
+            import json
+
+            console.print_json(json.dumps(upload_result, ensure_ascii=False))
+            return
+
+        console.print(f"[green]Uploaded {file_path.name} to {issue.issue_key}[/green]")
+        console.print(f"  Attachment ID: {attachment_id}")
+
+    except FileNotFoundError as e:
+        err_console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1) from e
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print(f"[red]Issue '{issue_key}' not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+@attachment_app.command("delete")
+def delete_attachment(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    attachment_id: Annotated[
+        int,
+        typer.Argument(help="Attachment ID"),
+    ],
+    force: Annotated[
+        bool,
+        typer.Option("--force", "-f", help="Skip confirmation"),
+    ] = False,
+) -> None:
+    """Delete an attachment."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+
+    if not force:
+        confirm = typer.confirm(f"Delete attachment {attachment_id} from {issue_key}?")
+        if not confirm:
+            console.print("[yellow]Cancelled.[/yellow]")
+            raise typer.Abort()
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            client.delete(f"/issues/{issue_key}/attachments/{attachment_id}")
+
+        console.print(
+            f"[green]Deleted attachment {attachment_id} from {issue_key}[/green]"
+        )
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print("[red]Attachment not found.[/red]")
         else:
             err_console.print(f"[red]API Error: {e}[/red]")
         raise typer.Exit(1) from e

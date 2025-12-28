@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -264,3 +265,77 @@ class BacklogClient:
             User information.
         """
         return self.get("/users/myself")  # type: ignore[return-value]
+
+    def upload_file(self, file_path: Path) -> dict[str, Any]:
+        """Upload a file to Backlog.
+
+        This uploads a file to /space/attachment endpoint.
+        The returned attachment ID can be used when creating/updating issues.
+
+        Args:
+            file_path: Path to the file to upload.
+
+        Returns:
+            Upload response with attachment info.
+
+        Raises:
+            BacklogAPIError: If upload fails.
+            FileNotFoundError: If file doesn't exist.
+        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        url = "/space/attachment"
+
+        with file_path.open("rb") as f:
+            files = {"file": (file_path.name, f)}
+            response = self.client.post(
+                url,
+                files=files,
+            )
+
+        if response.status_code >= 400:
+            raise BacklogAPIError.from_response(response)
+
+        return response.json()  # type: ignore[no-any-return]
+
+    def download_file(
+        self,
+        endpoint: str,
+        output_path: Path | None = None,
+    ) -> tuple[bytes, str]:
+        """Download a file from Backlog.
+
+        Args:
+            endpoint: API endpoint for the file.
+            output_path: Optional path to save the file.
+
+        Returns:
+            Tuple of (file content, filename).
+
+        Raises:
+            BacklogAPIError: If download fails.
+        """
+        url = endpoint.lstrip("/")
+        response = self.client.get(url)
+
+        if response.status_code >= 400:
+            raise BacklogAPIError.from_response(response)
+
+        # Try to get filename from Content-Disposition header
+        filename = "download"
+        content_disposition = response.headers.get("content-disposition", "")
+        if "filename=" in content_disposition:
+            # Parse filename from header
+            parts = content_disposition.split("filename=")
+            if len(parts) > 1:
+                filename = parts[1].strip('"').strip("'")
+
+        content = response.content
+
+        if output_path:
+            if output_path.is_dir():
+                output_path = output_path / filename
+            output_path.write_bytes(content)
+
+        return content, filename
