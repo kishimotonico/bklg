@@ -123,52 +123,6 @@ bacli issue attachment delete <issue-id> <attachment-id>
 bacli issue attachment delete PROJ-123 789
 ```
 
-## プロジェクト (Project)
-
-### プロジェクトの作成
-
-```bash
-bacli project create <project-key> --name <name> [flags]
-
-# 例: 基本的なプロジェクト作成
-bacli project create NEWPROJ --name "新規プロジェクト"
-
-# 例: オプションを指定して作成
-bacli project create NEWPROJ --name "新規プロジェクト" \
-  --text-format markdown \
-  --use-git \
-  --use-wiki
-```
-
-**flags:**
-- `--name, -n`: プロジェクト名
-- `--text-format`: テキスト形式 (markdown/backlog)
-- `--use-git`: Gitリポジトリを有効化
-- `--use-wiki`: Wikiを有効化
-- `--use-subtasking`: サブタスクを有効化
-
-### プロジェクトの編集
-
-```bash
-bacli project update <project-id> [flags]
-
-# 例: プロジェクト名を変更
-bacli project update PROJ --name "新しいプロジェクト名"
-
-# 例: アーカイブ
-bacli project update PROJ --archived
-```
-
-### プロジェクトの削除
-
-```bash
-bacli project delete <project-id>
-
-# 例
-bacli project delete PROJ
-bacli project delete PROJ --force  # 確認なしで削除
-```
-
 ## ウォッチ (Watch)
 
 ```bash
@@ -220,44 +174,6 @@ bacli wiki attachment list <wiki-id>
 bacli wiki attachment download <wiki-id> <attachment-id>
 bacli wiki attachment upload <wiki-id> <file-path>
 bacli wiki attachment delete <wiki-id> <attachment-id>
-```
-
-## プルリクエスト (PR)
-
-```bash
-# プルリクエスト一覧
-bacli pr list --project <project-id> --repo <repo-name>
-bacli pr list --project PROJ --repo myrepo
-
-# プルリクエストの表示
-bacli pr view <project-id> <repo-name> <pr-number>
-bacli pr view PROJ myrepo 42
-bacli pr view PROJ myrepo 42 --web  # ブラウザで開く
-
-# プルリクエストの作成
-bacli pr create --project <project-id> --repo <repo-name> \
-  --summary <summary> --base <base-branch> --branch <feature-branch>
-bacli pr create --project PROJ --repo myrepo \
-  --summary "新機能追加" --base main --branch feature/new-feature
-
-# プルリクエストの編集
-bacli pr update <project-id> <repo-name> <pr-number> [flags]
-
-# プルリクエストのコメント
-bacli pr comment list <project-id> <repo-name> <pr-number>
-bacli pr comment add <project-id> <repo-name> <pr-number> <content>
-```
-
-## Gitリポジトリ
-
-```bash
-# リポジトリ一覧
-bacli git list --project <project-id>
-bacli git list --project PROJ
-
-# リポジトリ情報
-bacli git info <project-id> <repo-name>
-bacli git info PROJ myrepo
 ```
 
 ## ユーザー (User)
