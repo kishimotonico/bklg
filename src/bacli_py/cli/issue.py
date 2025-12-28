@@ -58,9 +58,9 @@ def parse_issue_identifier(identifier: str) -> str:
 @app.command("list")
 def list_issues(
     project: Annotated[
-        str | None,
+        str,
         typer.Option("--project", "-p", help="Project key or ID"),
-    ] = None,
+    ],
     status: Annotated[
         str | None,
         typer.Option("--status", "-s", help="Filter by status name"),
@@ -112,10 +112,9 @@ def list_issues(
             }
 
             # Resolve project
-            if project:
-                project_resolver = ProjectResolver(client, cache)
-                project_id = project_resolver.resolve(project)
-                params["projectId[]"] = [project_id]
+            project_resolver = ProjectResolver(client, cache)
+            project_id = project_resolver.resolve(project)
+            params["projectId[]"] = [project_id]
 
             # Resolve assignee
             if assignee:
@@ -127,8 +126,8 @@ def list_issues(
             if keyword:
                 params["keyword"] = keyword
 
-            # Resolve status (requires project)
-            if status and project:
+            # Resolve status
+            if status:
                 project_resolver = ProjectResolver(client, cache)
                 proj = project_resolver.get_project(project)
                 # Fetch statuses for this project

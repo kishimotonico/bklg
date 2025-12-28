@@ -65,6 +65,7 @@ class TestListIssuesCommand:
         self,
         runner: CliRunner,
         configured_settings: Settings,
+        sample_project: dict[str, Any],
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test listing issues."""
@@ -73,9 +74,13 @@ class TestListIssuesCommand:
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
             mock_instance.__exit__.return_value = None
-            mock_instance.get.return_value = sample_issues
 
-            result = runner.invoke(app, ["list"])
+            mock_instance.get.side_effect = [
+                [sample_project],  # Projects
+                sample_issues,  # Issues
+            ]
+
+            result = runner.invoke(app, ["list", "--project", "TEST"])
 
             assert result.exit_code == 0
             assert "TEST-1" in result.output
@@ -108,6 +113,7 @@ class TestListIssuesCommand:
         self,
         runner: CliRunner,
         configured_settings: Settings,
+        sample_project: dict[str, Any],
         sample_user: dict[str, Any],
         sample_issues: list[dict[str, Any]],
     ) -> None:
@@ -120,10 +126,11 @@ class TestListIssuesCommand:
             mock_instance.get_myself.return_value = sample_user
 
             mock_instance.get.side_effect = [
+                [sample_project],  # Projects
                 sample_issues,  # Issues
             ]
 
-            result = runner.invoke(app, ["list", "--assignee", "@me"])
+            result = runner.invoke(app, ["list", "--project", "TEST", "--assignee", "@me"])
 
             assert result.exit_code == 0
             mock_instance.get_myself.assert_called()
@@ -132,6 +139,7 @@ class TestListIssuesCommand:
         self,
         runner: CliRunner,
         configured_settings: Settings,
+        sample_project: dict[str, Any],
         sample_issues: list[dict[str, Any]],
     ) -> None:
         """Test listing issues with JSON output."""
@@ -140,9 +148,13 @@ class TestListIssuesCommand:
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
             mock_instance.__exit__.return_value = None
-            mock_instance.get.return_value = sample_issues
 
-            result = runner.invoke(app, ["list", "--json"])
+            mock_instance.get.side_effect = [
+                [sample_project],  # Projects
+                sample_issues,  # Issues
+            ]
+
+            result = runner.invoke(app, ["list", "--project", "TEST", "--json"])
 
             assert result.exit_code == 0
             assert '"issueKey"' in result.output
@@ -151,6 +163,7 @@ class TestListIssuesCommand:
         self,
         runner: CliRunner,
         configured_settings: Settings,
+        sample_project: dict[str, Any],
     ) -> None:
         """Test listing issues when none exist."""
         with patch("bacli_py.cli.issue.BacklogClient") as mock_client:
@@ -158,9 +171,13 @@ class TestListIssuesCommand:
             mock_client.return_value = mock_instance
             mock_instance.__enter__.return_value = mock_instance
             mock_instance.__exit__.return_value = None
-            mock_instance.get.return_value = []
 
-            result = runner.invoke(app, ["list"])
+            mock_instance.get.side_effect = [
+                [sample_project],  # Projects
+                [],  # Issues (empty)
+            ]
+
+            result = runner.invoke(app, ["list", "--project", "TEST"])
 
             assert result.exit_code == 0
             assert "No issues found" in result.output
@@ -171,7 +188,7 @@ class TestListIssuesCommand:
         tmp_config_dir: Path,
     ) -> None:
         """Test listing issues when not logged in."""
-        result = runner.invoke(app, ["list"])
+        result = runner.invoke(app, ["list", "--project", "TEST"])
 
         assert result.exit_code == 1
         assert "Not logged in" in result.output
