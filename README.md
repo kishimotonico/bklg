@@ -1,49 +1,88 @@
-# bklg-py
+# bklg
 
-## 予定している使い方
+Backlog API の非公式コマンドラインツール。
 
-### CLIの基本機能
+## インストール
 
 ```bash
-# 認証機能: 最初はOAuth未対応で設定ファイルのアクセストークンを参照するためlogin/logoutは未実装
+# uv を使用
+uv pip install .
+
+# または pip を使用
+pip install .
+```
+
+開発用:
+
+```bash
+uv pip install -e ".[test]"
+```
+
+## 設定
+
+### 初期設定
+
+```bash
 bklg auth login
-bklg auth logout
-bklg auth status
+```
 
-# 基本機能
+対話的にスペースURLとAPIキーを設定します。
+
+設定は `~/.config/bklg/config.toml` に保存されます:
+
+```toml
+space_url = "https://example.backlog.com"
+api_key = "your-api-key"
+default_project = "PROJ"  # オプション
+```
+
+### APIキーの取得
+
+Backlog の個人設定 > API から API キーを発行できます。
+
+## 基本的な使い方
+
+```bash
+# プロジェクト一覧
 bklg project list
-bklg project create <project-name>
-bklg project delete <project-id>
-bklg project info <project-id>
 
-bklg issue list --project <project-id>
-bklg issue create --project <project-id> [flags]
-bklg issue update <issue-id> [flags]
+# 課題一覧
+bklg issue list --project PROJ
 
-bklg issue comment add
+# 課題の詳細を表示
+bklg issue view PROJ-123
+
+# 課題をブラウザで開く
+bklg issue open PROJ-123
+
+# 課題を作成
+bklg issue create --project PROJ --type "タスク" --summary "新しいタスク"
+
+# 課題にコメント
+bklg issue comment add PROJ-123 "対応しました"
+
+# 通知を確認
+bklg notification list
 ```
 
-- `<project-id>`: プロジェクトID。APIで利用する内部IDの他、ワークスペースで一意のプロジェクトキー(例: PROJ)でもOK
-- `<issue-id>`: 課題のID。APIで利用する内部IDの他、課題キー(例: PROJ-123)や、URL(例: `https://hoge.backlog.co.jp/view/PROJ-123`)でもOK
-- `[flags]`: 各種オプション。APIドキュメントを参照
+### サブコマンド一覧
 
-上のコマンドはある程度使いやすいようにラップしているため、細かい操作が必要なときはAPIを使います
+| コマンド | 説明 |
+|---------|------|
+| `auth` | 認証設定 |
+| `project` | プロジェクト操作 |
+| `issue` | 課題操作 |
+| `user` | ユーザー情報 |
+| `space` | スペース情報 |
+| `notification` | 通知 |
+| `watch` | ウォッチ |
+| `wiki` | Wiki操作 |
+| `api` | 汎用APIアクセス |
 
-```bash
-bklg api <endpoint> [--method <method>] [--data <data>] [--hearder <key:value> ...]
-```
+各コマンドの詳細は `bklg <command> --help` で確認できます。
 
-### TUI機能
+詳しい使い方は [cli-usage.md](./cli-usage.md) を参照してください。
 
-必要なパラメータを省略した場合、必要な情報を対話的に入力できるTUIモードに入ります
+## ライセンス
 
-```bash
-bklg issue create --project <project-id>
-```
-
-他にも最初からTUIモードに入ることもできます
-
-```bash
-bklg
-```
-
+MIT
