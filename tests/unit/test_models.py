@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from bacli_py.models.attachment import Attachment, UploadedFile
 from bacli_py.models.common import (
     BacklogError,
     BacklogErrorResponse,
@@ -13,8 +14,12 @@ from bacli_py.models.common import (
     RateLimitInfo,
 )
 from bacli_py.models.issue import Comment, Issue, IssueUser
+from bacli_py.models.notification import Notification, NotificationCount
 from bacli_py.models.project import IssueType, Priority, Project, Status
+from bacli_py.models.space import DiskUsage, Space, SpaceNotification
 from bacli_py.models.user import User
+from bacli_py.models.watch import Watching, WatchingCount
+from bacli_py.models.wiki import Wiki, WikiTag
 
 
 class TestBacklogError:
@@ -219,3 +224,155 @@ class TestComment:
         sample_comment["content"] = None
         comment = Comment.model_validate(sample_comment)
         assert comment.content is None
+
+
+class TestSpace:
+    """Tests for Space model."""
+
+    def test_from_api_response(self, sample_space: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        space = Space.model_validate(sample_space)
+        assert space.space_key == "demo"
+        assert space.name == "Demo Space"
+        assert space.owner_id == 1
+        assert space.lang == "ja"
+        assert space.timezone == "Asia/Tokyo"
+        assert space.text_formatting_rule == "markdown"
+
+
+class TestDiskUsage:
+    """Tests for DiskUsage model."""
+
+    def test_from_api_response(self, sample_disk_usage: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        disk = DiskUsage.model_validate(sample_disk_usage)
+        assert disk.capacity == 1073741824
+        assert disk.issue == 104857600
+        assert disk.wiki == 52428800
+        assert disk.git == 524288000
+        assert disk.git_lfs == 209715200
+        assert disk.pull_request == 10485760
+
+
+class TestSpaceNotification:
+    """Tests for SpaceNotification model."""
+
+    def test_from_api_response(self, sample_space_notification: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        notification = SpaceNotification.model_validate(sample_space_notification)
+        assert notification.content == "This is a space announcement."
+        assert notification.updated is not None
+
+    def test_empty_notification(self) -> None:
+        """Test empty notification."""
+        notification = SpaceNotification.model_validate({})
+        assert notification.content is None
+        assert notification.updated is None
+
+
+class TestWiki:
+    """Tests for Wiki model."""
+
+    def test_from_api_response(self, sample_wiki: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        wiki = Wiki.model_validate(sample_wiki)
+        assert wiki.id == 1
+        assert wiki.project_id == 1
+        assert wiki.name == "Test Wiki Page"
+        assert wiki.content == "# Test\n\nThis is a test wiki page."
+        assert len(wiki.tags) == 1
+        assert wiki.created_user is not None
+        assert wiki.created_user.name == "Test User"
+
+    def test_minimal_wiki(self) -> None:
+        """Test wiki with minimal data."""
+        data = {"id": 1, "projectId": 1, "name": "Minimal"}
+        wiki = Wiki.model_validate(data)
+        assert wiki.id == 1
+        assert wiki.content is None
+        assert wiki.tags == []
+
+
+class TestWikiTag:
+    """Tests for WikiTag model."""
+
+    def test_from_api_response(self) -> None:
+        """Test creating from API response."""
+        data = {"id": 1, "name": "documentation"}
+        tag = WikiTag.model_validate(data)
+        assert tag.id == 1
+        assert tag.name == "documentation"
+
+
+class TestNotification:
+    """Tests for Notification model."""
+
+    def test_from_api_response(self, sample_notification: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        notification = Notification.model_validate(sample_notification)
+        assert notification.id == 1
+        assert notification.already_read is False
+        assert notification.reason == 1
+        assert notification.resource_already_read is False
+        assert notification.project is not None
+        assert notification.issue is not None
+        assert notification.sender is not None
+        assert notification.sender.name == "Test User"
+
+
+class TestNotificationCount:
+    """Tests for NotificationCount model."""
+
+    def test_from_api_response(self) -> None:
+        """Test creating from API response."""
+        data = {"count": 5}
+        count = NotificationCount.model_validate(data)
+        assert count.count == 5
+
+
+class TestWatching:
+    """Tests for Watching model."""
+
+    def test_from_api_response(self, sample_watching: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        watching = Watching.model_validate(sample_watching)
+        assert watching.id == 1
+        assert watching.resource_already_read is True
+        assert watching.note == "Important issue"
+        assert watching.type == "issue"
+        assert watching.issue is not None
+        assert watching.last_content_updated is not None
+
+
+class TestWatchingCount:
+    """Tests for WatchingCount model."""
+
+    def test_from_api_response(self) -> None:
+        """Test creating from API response."""
+        data = {"count": 10}
+        count = WatchingCount.model_validate(data)
+        assert count.count == 10
+
+
+class TestAttachment:
+    """Tests for Attachment model."""
+
+    def test_from_api_response(self, sample_attachment: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        attachment = Attachment.model_validate(sample_attachment)
+        assert attachment.id == 1
+        assert attachment.name == "test_file.pdf"
+        assert attachment.size == 1048576
+        assert attachment.created_user is not None
+        assert attachment.created_user.name == "Test User"
+
+
+class TestUploadedFile:
+    """Tests for UploadedFile model."""
+
+    def test_from_api_response(self, sample_uploaded_file: dict[str, Any]) -> None:
+        """Test creating from API response."""
+        uploaded = UploadedFile.model_validate(sample_uploaded_file)
+        assert uploaded.id == 1
+        assert uploaded.name == "uploaded_file.txt"
+        assert uploaded.size == 2048

@@ -8,11 +8,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bacli_py.models import IssueType, Project, User
+from bacli_py.models import IssueType, Priority, Project, Status, User
 from bacli_py.resolver.base import ResolverError
 from bacli_py.resolver.cache import ProjectCache, ResolverCache
 from bacli_py.resolver.issue_type import IssueTypeResolver
+from bacli_py.resolver.priority import PriorityResolver
 from bacli_py.resolver.project import ProjectResolver
+from bacli_py.resolver.status import StatusResolver
 from bacli_py.resolver.user import UserResolver
 
 
@@ -455,3 +457,151 @@ class TestBaseResolverOrNone:
 
         result = resolver.resolve_or_none("NONEXISTENT")
         assert result is None
+
+
+class TestStatusResolver:
+    """Tests for StatusResolver class."""
+
+    def test_resolve_by_name(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_statuses: list[dict[str, Any]],
+    ) -> None:
+        """Test resolving status by name."""
+        mock_client.get.return_value = sample_statuses
+        resolver = StatusResolver(mock_client, mock_cache, project_id=1, project_key="TEST")
+
+        status_id = resolver.resolve("Open")
+        assert status_id == 1
+
+    def test_resolve_uses_cache(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+    ) -> None:
+        """Test resolver uses cache when available."""
+        # Pre-populate cache
+        mock_cache.set_statuses("TEST", 1, {"Cached Status": 999})
+
+        resolver = StatusResolver(mock_client, mock_cache, project_id=1, project_key="TEST")
+        status_id = resolver.resolve("Cached Status")
+
+        assert status_id == 999
+        mock_client.get.assert_not_called()
+
+    def test_resolve_not_found(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_statuses: list[dict[str, Any]],
+    ) -> None:
+        """Test ResolverError raised when status not found."""
+        mock_client.get.return_value = sample_statuses
+        resolver = StatusResolver(mock_client, mock_cache, project_id=1, project_key="TEST")
+
+        with pytest.raises(ResolverError) as exc_info:
+            resolver.resolve("NonexistentStatus")
+
+        assert exc_info.value.resource_type == "status"
+
+    def test_get_all(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_statuses: list[dict[str, Any]],
+    ) -> None:
+        """Test get_all returns all mappings."""
+        mock_client.get.return_value = sample_statuses
+        resolver = StatusResolver(mock_client, mock_cache, project_id=1, project_key="TEST")
+
+        all_statuses = resolver.get_all()
+        assert all_statuses == {"Open": 1, "In Progress": 2, "Done": 3}
+
+    def test_list_statuses(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_statuses: list[dict[str, Any]],
+    ) -> None:
+        """Test list_statuses returns all statuses."""
+        mock_client.get.return_value = sample_statuses
+        resolver = StatusResolver(mock_client, mock_cache, project_id=1, project_key="TEST")
+
+        statuses = resolver.list_statuses()
+        assert len(statuses) == 3
+        assert all(isinstance(s, Status) for s in statuses)
+
+
+class TestPriorityResolver:
+    """Tests for PriorityResolver class."""
+
+    def test_resolve_by_name(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_priorities: list[dict[str, Any]],
+    ) -> None:
+        """Test resolving priority by name."""
+        mock_client.get.return_value = sample_priorities
+        resolver = PriorityResolver(mock_client, mock_cache)
+
+        priority_id = resolver.resolve("Normal")
+        assert priority_id == 3
+
+    def test_resolve_uses_cache(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+    ) -> None:
+        """Test resolver uses cache when available."""
+        # Pre-populate cache
+        mock_cache.set_priorities({"Cached Priority": 888})
+
+        resolver = PriorityResolver(mock_client, mock_cache)
+        priority_id = resolver.resolve("Cached Priority")
+
+        assert priority_id == 888
+        mock_client.get.assert_not_called()
+
+    def test_resolve_not_found(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_priorities: list[dict[str, Any]],
+    ) -> None:
+        """Test ResolverError raised when priority not found."""
+        mock_client.get.return_value = sample_priorities
+        resolver = PriorityResolver(mock_client, mock_cache)
+
+        with pytest.raises(ResolverError) as exc_info:
+            resolver.resolve("NonexistentPriority")
+
+        assert exc_info.value.resource_type == "priority"
+
+    def test_get_all(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_priorities: list[dict[str, Any]],
+    ) -> None:
+        """Test get_all returns all mappings."""
+        mock_client.get.return_value = sample_priorities
+        resolver = PriorityResolver(mock_client, mock_cache)
+
+        all_priorities = resolver.get_all()
+        assert all_priorities == {"High": 2, "Normal": 3, "Low": 4}
+
+    def test_list_priorities(
+        self,
+        mock_client: MagicMock,
+        mock_cache: ResolverCache,
+        sample_priorities: list[dict[str, Any]],
+    ) -> None:
+        """Test list_priorities returns all priorities."""
+        mock_client.get.return_value = sample_priorities
+        resolver = PriorityResolver(mock_client, mock_cache)
+
+        priorities = resolver.list_priorities()
+        assert len(priorities) == 3
+        assert all(isinstance(p, Priority) for p in priorities)

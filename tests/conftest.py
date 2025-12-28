@@ -280,6 +280,120 @@ def sample_api_error() -> dict[str, Any]:
     }
 
 
+@pytest.fixture
+def sample_space() -> dict[str, Any]:
+    """Sample space data."""
+    return {
+        "spaceKey": "demo",
+        "name": "Demo Space",
+        "ownerId": 1,
+        "lang": "ja",
+        "timezone": "Asia/Tokyo",
+        "reportSendTime": "08:00:00",
+        "textFormattingRule": "markdown",
+        "created": "2024-01-01T00:00:00Z",
+        "updated": "2024-01-15T00:00:00Z",
+    }
+
+
+@pytest.fixture
+def sample_disk_usage() -> dict[str, Any]:
+    """Sample disk usage data."""
+    return {
+        "capacity": 1073741824,
+        "issue": 104857600,
+        "wiki": 52428800,
+        "file": 26214400,
+        "subversion": 0,
+        "git": 524288000,
+        "gitLFS": 209715200,
+        "pullRequest": 10485760,
+    }
+
+
+@pytest.fixture
+def sample_space_notification() -> dict[str, Any]:
+    """Sample space notification data."""
+    return {
+        "content": "This is a space announcement.",
+        "updated": "2024-01-01T00:00:00Z",
+    }
+
+
+@pytest.fixture
+def sample_wiki(sample_user: dict[str, Any]) -> dict[str, Any]:
+    """Sample wiki data."""
+    return {
+        "id": 1,
+        "projectId": 1,
+        "name": "Test Wiki Page",
+        "content": "# Test\n\nThis is a test wiki page.",
+        "tags": [{"id": 1, "name": "documentation"}],
+        "attachments": [],
+        "sharedFiles": [],
+        "stars": [],
+        "createdUser": sample_user,
+        "created": "2024-01-01T00:00:00Z",
+        "updatedUser": sample_user,
+        "updated": "2024-01-10T00:00:00Z",
+    }
+
+
+@pytest.fixture
+def sample_notification(sample_user: dict[str, Any]) -> dict[str, Any]:
+    """Sample notification data."""
+    return {
+        "id": 1,
+        "alreadyRead": False,
+        "reason": 1,
+        "resourceAlreadyRead": False,
+        "project": {"id": 1, "projectKey": "TEST", "name": "Test Project"},
+        "issue": {"id": 100, "issueKey": "TEST-1", "summary": "Test Issue"},
+        "comment": None,
+        "pullRequest": None,
+        "pullRequestComment": None,
+        "sender": sample_user,
+        "created": "2024-01-01T00:00:00Z",
+    }
+
+
+@pytest.fixture
+def sample_watching() -> dict[str, Any]:
+    """Sample watching data."""
+    return {
+        "id": 1,
+        "resourceAlreadyRead": True,
+        "note": "Important issue",
+        "type": "issue",
+        "issue": {"id": 100, "issueKey": "TEST-1", "summary": "Test Issue"},
+        "lastContentUpdated": "2024-01-15T00:00:00Z",
+        "created": "2024-01-01T00:00:00Z",
+        "updated": "2024-01-15T00:00:00Z",
+    }
+
+
+@pytest.fixture
+def sample_attachment(sample_user: dict[str, Any]) -> dict[str, Any]:
+    """Sample attachment data."""
+    return {
+        "id": 1,
+        "name": "test_file.pdf",
+        "size": 1048576,
+        "createdUser": sample_user,
+        "created": "2024-01-01T00:00:00Z",
+    }
+
+
+@pytest.fixture
+def sample_uploaded_file() -> dict[str, Any]:
+    """Sample uploaded file data."""
+    return {
+        "id": 1,
+        "name": "uploaded_file.txt",
+        "size": 2048,
+    }
+
+
 # Helper to write JSON fixtures to files
 
 
