@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -117,3 +118,92 @@ class TestSettingsPersistence:
 
         loaded = get_settings()
         assert loaded.space_url == settings.space_url
+
+
+class TestEnvironmentVariables:
+    """Tests for environment variable support."""
+
+    def test_load_from_env_vars_only(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test loading settings from environment variables only."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "https://env.backlog.com")
+        monkeypatch.setenv("BKLG_API_KEY", "env-key")
+        monkeypatch.setenv("BKLG_DEFAULT_PROJECT", "ENV")
+
+        settings = Settings.load()
+        assert settings.space_url == "https://env.backlog.com"
+        assert settings.api_key == "env-key"
+        assert settings.default_project == "ENV"
+
+    def test_env_vars_override_config_file(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test environment variables override config file values."""
+        # Save config file
+        file_settings = Settings(
+            space_url="https://file.backlog.com",
+            api_key="file-key",
+            default_project="FILE",
+        )
+        file_settings.save()
+
+        # Set environment variables
+        monkeypatch.setenv("BKLG_SPACE_URL", "https://env.backlog.com")
+        monkeypatch.setenv("BKLG_API_KEY", "env-key")
+
+        # Load should prefer env vars
+        settings = Settings.load()
+        assert settings.space_url == "https://env.backlog.com"
+        assert settings.api_key == "env-key"
+        assert settings.default_project == "FILE"  # Not overridden
+
+    def test_partial_env_var_override(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test partial override with environment variables."""
+        # Save config file
+        file_settings = Settings(
+            space_url="https://file.backlog.com",
+            api_key="file-key",
+            default_project="FILE",
+        )
+        file_settings.save()
+
+        # Set only API key in env
+        monkeypatch.setenv("BKLG_API_KEY", "env-key")
+
+        settings = Settings.load()
+        assert settings.space_url == "https://file.backlog.com"  # From file
+        assert settings.api_key == "env-key"  # From env
+        assert settings.default_project == "FILE"  # From file
+
+    def test_env_vars_with_no_config_file(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test environment variables work without config file."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "https://env.backlog.com")
+        monkeypatch.setenv("BKLG_API_KEY", "env-key")
+
+        settings = Settings.load()
+        assert settings.space_url == "https://env.backlog.com"
+        assert settings.api_key == "env-key"
+        assert settings.default_project is None
+
+    def test_no_env_vars_no_config_file(self, tmp_config_dir: Path) -> None:
+        """Test loading with no environment variables and no config file."""
+        settings = Settings.load()
+        assert settings.space_url is None
+        assert settings.api_key is None
+        assert settings.default_project is None
+
+    def test_get_settings_with_env_vars(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test get_settings helper with environment variables."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "https://env.backlog.com")
+        monkeypatch.setenv("BKLG_API_KEY", "env-key")
+
+        settings = get_settings()
+        assert settings.space_url == "https://env.backlog.com"
+        assert settings.api_key == "env-key"

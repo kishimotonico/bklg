@@ -36,6 +36,48 @@ api_key = "your-api-key"
 default_project = "PROJ"  # オプション
 ```
 
+### 環境変数での設定
+
+AWS CLIと同様に、環境変数で設定を上書きできます。環境変数は設定ファイルより優先されます。
+
+```bash
+# 環境変数で設定
+export BKLG_SPACE_URL="https://example.backlog.com"
+export BKLG_API_KEY="your-api-key"
+export BKLG_DEFAULT_PROJECT="PROJ"  # オプション
+
+# コマンド実行
+bklg issue list
+```
+
+#### 優先順位
+
+設定の優先順位は以下の通りです（上が優先）：
+
+1. 環境変数（`BKLG_SPACE_URL`, `BKLG_API_KEY`, `BKLG_DEFAULT_PROJECT`）
+2. 設定ファイル（`~/.config/bklg/config.toml`）
+
+#### 使用例
+
+**CI/CDでの使用:**
+
+```yaml
+# GitHub Actions の例
+- name: Create Backlog issue
+  env:
+    BKLG_SPACE_URL: ${{ secrets.BACKLOG_SPACE_URL }}
+    BKLG_API_KEY: ${{ secrets.BACKLOG_API_KEY }}
+  run: |
+    bklg issue create --project PROJ --summary "Deploy completed"
+```
+
+**一時的な設定の上書き:**
+
+```bash
+# 別のアカウントで一時的に実行
+BKLG_API_KEY="another-api-key" bklg issue list --project PROJ
+```
+
 ### APIキーの取得
 
 Backlog の個人設定 > API から API キーを発行できます。

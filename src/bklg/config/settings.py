@@ -1,10 +1,17 @@
 """Settings management for bklg.
 
 Handles reading and writing configuration from ~/.config/bklg/config.toml
+and environment variables.
+
+Environment variables take precedence over config file values:
+- BKLG_SPACE_URL: Backlog space URL
+- BKLG_API_KEY: Backlog API key
+- BKLG_DEFAULT_PROJECT: Default project key
 """
 
 from __future__ import annotations
 
+import os
 import tomllib
 from pathlib import Path
 from typing import Self
@@ -50,15 +57,31 @@ class Settings(BaseModel):
 
     @classmethod
     def load(cls) -> Self:
-        """Load settings from config file."""
+        """Load settings from environment variables and config file.
+
+        Environment variables take precedence over config file values.
+        Supported environment variables:
+        - BKLG_SPACE_URL: Backlog space URL
+        - BKLG_API_KEY: Backlog API key
+        - BKLG_DEFAULT_PROJECT: Default project key
+        """
+        # Load from config file first
         config_file = get_config_file()
-        if not config_file.exists():
-            return cls()
+        if config_file.exists():
+            with config_file.open("rb") as f:
+                data = tomllib.load(f)
+        else:
+            data = {}
 
-        with config_file.open("rb") as f:
-            data = tomllib.load(f)
+        # Override with environment variables (higher priority)
+        if space_url := os.getenv("BKLG_SPACE_URL"):
+            data["space_url"] = space_url
+        if api_key := os.getenv("BKLG_API_KEY"):
+            data["api_key"] = api_key
+        if default_project := os.getenv("BKLG_DEFAULT_PROJECT"):
+            data["default_project"] = default_project
 
-        return cls.model_validate(data)
+        return cls.model_validate(data) if data else cls()
 
     def save(self) -> None:
         """Save settings to config file."""
