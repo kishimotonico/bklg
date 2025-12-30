@@ -61,7 +61,7 @@ class Settings(BaseModel):
 
         Environment variables take precedence over config file values.
         Supported environment variables:
-        - BKLG_SPACE_URL: Backlog space URL
+        - BKLG_SPACE_URL: Backlog space URL (domain or full URL)
         - BKLG_API_KEY: Backlog API key
         - BKLG_DEFAULT_PROJECT: Default project key
         """
@@ -75,6 +75,12 @@ class Settings(BaseModel):
 
         # Override with environment variables (higher priority)
         if space_url := os.getenv("BKLG_SPACE_URL"):
+            # Normalize URL: add https:// if not present, remove trailing slash
+            space_url = space_url.rstrip("/")
+            if not space_url.startswith("https://") and not space_url.startswith(
+                "http://"
+            ):
+                space_url = f"https://{space_url}"
             data["space_url"] = space_url
         if api_key := os.getenv("BKLG_API_KEY"):
             data["api_key"] = api_key

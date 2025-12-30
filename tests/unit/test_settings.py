@@ -207,3 +207,43 @@ class TestEnvironmentVariables:
         settings = get_settings()
         assert settings.space_url == "https://env.backlog.com"
         assert settings.api_key == "env-key"
+
+    def test_env_var_url_normalization_domain_only(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test URL normalization for domain-only format."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "example.backlog.com")
+        monkeypatch.setenv("BKLG_API_KEY", "test-key")
+
+        settings = Settings.load()
+        assert settings.space_url == "https://example.backlog.com"
+
+    def test_env_var_url_normalization_with_trailing_slash(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test URL normalization removes trailing slash."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "https://example.backlog.com/")
+        monkeypatch.setenv("BKLG_API_KEY", "test-key")
+
+        settings = Settings.load()
+        assert settings.space_url == "https://example.backlog.com"
+
+    def test_env_var_url_normalization_domain_with_trailing_slash(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test URL normalization for domain with trailing slash."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "example.backlog.com/")
+        monkeypatch.setenv("BKLG_API_KEY", "test-key")
+
+        settings = Settings.load()
+        assert settings.space_url == "https://example.backlog.com"
+
+    def test_env_var_url_normalization_preserves_http(
+        self, tmp_config_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test URL normalization preserves explicit http://."""
+        monkeypatch.setenv("BKLG_SPACE_URL", "http://example.backlog.com")
+        monkeypatch.setenv("BKLG_API_KEY", "test-key")
+
+        settings = Settings.load()
+        assert settings.space_url == "http://example.backlog.com"
