@@ -58,9 +58,13 @@ def parse_issue_identifier(identifier: str) -> str:
 @app.command("list")
 def list_issues(
     project: Annotated[
-        str,
+        str | None,
         typer.Option("--project", "-p", help="Project key or ID"),
-    ],
+    ] = None,
+    all_projects: Annotated[
+        bool,
+        typer.Option("--all-projects", help="Search across all projects"),
+    ] = False,
     status: Annotated[
         str | None,
         typer.Option("--status", "-s", help="Filter by status name"),
@@ -73,6 +77,18 @@ def list_issues(
         str | None,
         typer.Option("--keyword", "-k", help="Search keyword"),
     ] = None,
+    due_date_since: Annotated[
+        str | None,
+        typer.Option("--due-date-since", help="Filter by due date from (YYYY-MM-DD)"),
+    ] = None,
+    due_date_until: Annotated[
+        str | None,
+        typer.Option("--due-date-until", help="Filter by due date until (YYYY-MM-DD)"),
+    ] = None,
+    overdue: Annotated[
+        bool,
+        typer.Option("--overdue", help="Show only overdue issues"),
+    ] = False,
     limit: Annotated[
         int,
         typer.Option("--limit", "-l", help="Number of issues to fetch"),
@@ -101,6 +117,22 @@ def list_issues(
         err_console.print("Run 'bklg auth login' to authenticate.")
         raise typer.Exit(1)
 
+    # Validate project/all-projects options
+    if project and all_projects:
+        err_console.print("[red]Cannot specify both --project and --all-projects.[/red]")
+        raise typer.Exit(1)
+    if not project and not all_projects:
+        err_console.print("[red]Must specify either --project or --all-projects.[/red]")
+        raise typer.Exit(1)
+
+    # Handle --overdue flag
+    effective_due_date_until = due_date_until
+    if overdue:
+        from datetime import date, timedelta
+
+        yesterday = date.today() - timedelta(days=1)
+        effective_due_date_until = yesterday.strftime("%Y-%m-%d")
+
     try:
         with BacklogClient(settings=settings) as client:
             cache = ResolverCache()
@@ -111,10 +143,11 @@ def list_issues(
                 "order": order,
             }
 
-            # Resolve project
-            project_resolver = ProjectResolver(client, cache)
-            project_id = project_resolver.resolve(project)
-            params["projectId[]"] = [project_id]
+            # Resolve project (only if not --all-projects)
+            if project:
+                project_resolver = ProjectResolver(client, cache)
+                project_id = project_resolver.resolve(project)
+                params["projectId[]"] = [project_id]
 
             # Resolve assignee
             if assignee:
@@ -126,19 +159,37 @@ def list_issues(
             if keyword:
                 params["keyword"] = keyword
 
+            # Add due date filters
+            if due_date_since:
+                params["dueDateSince"] = due_date_since
+            if effective_due_date_until:
+                params["dueDateUntil"] = effective_due_date_until
+
             # Resolve status
             if status:
-                project_resolver = ProjectResolver(client, cache)
-                proj = project_resolver.get_project(project)
-                # Fetch statuses for this project
-                status_data = client.get(f"/projects/{proj.id}/statuses")
-                status_map = {s["name"]: s["id"] for s in status_data}  # type: ignore[union-attr]
-                if status in status_map:
-                    params["statusId[]"] = [status_map[status]]
+                if project:
+                    project_resolver = ProjectResolver(client, cache)
+                    proj = project_resolver.get_project(project)
+                    # Fetch statuses for this project
+                    status_data = client.get(f"/projects/{proj.id}/statuses")
+                    status_map = {s["name"]: s["id"] for s in status_data}  # type: ignore[union-attr]
+                    if status in status_map:
+                        params["statusId[]"] = [status_map[status]]
+                else:
+                    # For --all-projects, we cannot filter by status name
+                    # since different projects may have different status IDs
+                    err_console.print(
+                        "[yellow]Warning: --status filter requires --project to be specified.[/yellow]"
+                    )
 
             # Fetch issues
             data = client.get("/issues", params=params)
             issues = [Issue.model_validate(i) for i in data]  # type: ignore[union-attr]
+
+            # If --overdue, filter out completed issues
+            if overdue:
+                # Filter by status: exclude "完了" (Closed) status
+                issues = [i for i in issues if i.status.name != "完了"]
 
         if json_output:
             import json
@@ -155,6 +206,8 @@ def list_issues(
         title = "Issues"
         if project:
             title = f"Issues: {project}"
+        elif all_projects:
+            title = "Issues: All Projects"
 
         table = formatter.format_issue_table(issues, title=title)
         console.print(table)
@@ -995,4 +1048,190 @@ def delete_attachment(
             err_console.print("[red]Attachment not found.[/red]")
         else:
             err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+@app.command("bulk-update")
+def bulk_update_issues(
+    summary: Annotated[
+        str | None,
+        typer.Option("--summary", "-s", help="New summary/title"),
+    ] = None,
+    description: Annotated[
+        str | None,
+        typer.Option("--description", "-d", help="New description"),
+    ] = None,
+    status: Annotated[
+        str | None,
+        typer.Option("--status", help="New status name"),
+    ] = None,
+    priority: Annotated[
+        str | None,
+        typer.Option("--priority", help="New priority name"),
+    ] = None,
+    assignee: Annotated[
+        str | None,
+        typer.Option("--assignee", "-a", help="New assignee (@me for self)"),
+    ] = None,
+    due_date: Annotated[
+        str | None,
+        typer.Option("--due-date", help="New due date (YYYY-MM-DD)"),
+    ] = None,
+    start_date: Annotated[
+        str | None,
+        typer.Option("--start-date", help="New start date (YYYY-MM-DD)"),
+    ] = None,
+    estimated_hours: Annotated[
+        float | None,
+        typer.Option("--estimated-hours", help="Estimated hours"),
+    ] = None,
+    actual_hours: Annotated[
+        float | None,
+        typer.Option("--actual-hours", help="Actual hours"),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show what would be updated without making changes"),
+    ] = False,
+) -> None:
+    """Update multiple issues from stdin (one issue key per line).
+
+    Example:
+        bklg issue list -p PROJ --overdue --json | jq -r '.[].issueKey' | bklg issue bulk-update --due-date 2024-02-15
+    """
+    import sys
+
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        err_console.print("Run 'bklg auth login' to authenticate.")
+        raise typer.Exit(1)
+
+    # Check if any update field is provided
+    if all(
+        v is None
+        for v in [
+            summary,
+            description,
+            status,
+            priority,
+            assignee,
+            due_date,
+            start_date,
+            estimated_hours,
+            actual_hours,
+        ]
+    ):
+        err_console.print("[yellow]No update options provided.[/yellow]")
+        raise typer.Exit(1)
+
+    # Read issue keys from stdin
+    issue_keys = []
+    for line in sys.stdin:
+        line = line.strip()
+        if line:
+            issue_keys.append(parse_issue_identifier(line))
+
+    if not issue_keys:
+        err_console.print("[yellow]No issue keys provided on stdin.[/yellow]")
+        raise typer.Exit(1)
+
+    console.print(f"[cyan]Found {len(issue_keys)} issue(s) to update.[/cyan]")
+
+    if dry_run:
+        console.print("\n[yellow]DRY RUN - No changes will be made[/yellow]\n")
+        console.print("Issues to be updated:")
+        for key in issue_keys:
+            console.print(f"  - {key}")
+        console.print("\nUpdate fields:")
+        if summary:
+            console.print(f"  - summary: {summary}")
+        if description:
+            console.print(f"  - description: {description}")
+        if status:
+            console.print(f"  - status: {status}")
+        if priority:
+            console.print(f"  - priority: {priority}")
+        if assignee:
+            console.print(f"  - assignee: {assignee}")
+        if due_date:
+            console.print(f"  - due_date: {due_date}")
+        if start_date:
+            console.print(f"  - start_date: {start_date}")
+        if estimated_hours is not None:
+            console.print(f"  - estimated_hours: {estimated_hours}")
+        if actual_hours is not None:
+            console.print(f"  - actual_hours: {actual_hours}")
+        return
+
+    # Perform bulk update
+    try:
+        with BacklogClient(settings=settings) as client:
+            cache = ResolverCache()
+            success_count = 0
+            error_count = 0
+
+            for issue_key in issue_keys:
+                try:
+                    # Build update data
+                    data: dict[str, str | int | float] = {}
+
+                    if summary:
+                        data["summary"] = summary
+
+                    if description:
+                        data["description"] = description
+
+                    # Resolve status if provided (needs project info from issue)
+                    if status:
+                        # First fetch the issue to get project info
+                        issue_data = client.get(f"/issues/{issue_key}")
+                        issue = Issue.model_validate(issue_data)
+                        status_resolver = StatusResolver(
+                            client,
+                            cache,
+                            issue.project_id,
+                            issue.issue_key.rsplit("-", 1)[0],
+                        )
+                        status_id = status_resolver.resolve(status)
+                        data["statusId"] = status_id
+
+                    if priority:
+                        priority_resolver = PriorityResolver(client, cache)
+                        priority_id = priority_resolver.resolve(priority)
+                        data["priorityId"] = priority_id
+
+                    if assignee:
+                        user_resolver = UserResolver(client, cache)
+                        assignee_id = user_resolver.resolve(assignee)
+                        data["assigneeId"] = assignee_id
+
+                    if due_date:
+                        data["dueDate"] = due_date
+
+                    if start_date:
+                        data["startDate"] = start_date
+
+                    if estimated_hours is not None:
+                        data["estimatedHours"] = estimated_hours
+
+                    if actual_hours is not None:
+                        data["actualHours"] = actual_hours
+
+                    # Update issue
+                    client.patch(f"/issues/{issue_key}", data=data)
+                    console.print(f"[green]✓ Updated {issue_key}[/green]")
+                    success_count += 1
+
+                except (ResolverError, BacklogAPIError) as e:
+                    err_console.print(f"[red]✗ Failed to update {issue_key}: {e}[/red]")
+                    error_count += 1
+
+            # Summary
+            console.print(
+                f"\n[cyan]Completed: {success_count} succeeded, {error_count} failed[/cyan]"
+            )
+
+    except Exception as e:
+        err_console.print(f"[red]Unexpected error: {e}[/red]")
         raise typer.Exit(1) from e
