@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 from bklg.config.settings import get_cache_dir
+from bklg.utils.api_stats import record_cache_hit
+from bklg.utils.logger import api_logger
 
 CACHE_TTL_SECONDS = 24 * 60 * 60  # 24 hours
 
@@ -122,7 +122,11 @@ class ResolverCache:
         """
         cache = self.data.projects.get(project_key)
         if cache and not self.is_expired(cache.last_updated):
+            api_logger.debug(f"キャッシュヒット: project/{project_key}")
+            record_cache_hit(f"project/{project_key}")
             return cache
+        if cache:
+            api_logger.debug(f"キャッシュ期限切れ: project/{project_key}")
         return None
 
     def set_project(self, project_key: str, cache: ProjectCache) -> None:
@@ -156,7 +160,12 @@ class ResolverCache:
             Priority name -> ID mapping, or empty dict if expired.
         """
         if self.is_expired(self.data.last_updated):
+            if self.data.priorities:
+                api_logger.debug("キャッシュ期限切れ: priorities")
             return {}
+        if self.data.priorities:
+            api_logger.debug("キャッシュヒット: priorities")
+            record_cache_hit("priorities")
         return self.data.priorities
 
     def set_priorities(self, priorities: dict[str, int]) -> None:
@@ -177,7 +186,12 @@ class ResolverCache:
             User ID -> numeric ID mapping, or empty dict if expired.
         """
         if self.is_expired(self.data.last_updated):
+            if self.data.global_users:
+                api_logger.debug("キャッシュ期限切れ: global_users")
             return {}
+        if self.data.global_users:
+            api_logger.debug("キャッシュヒット: global_users")
+            record_cache_hit("global_users")
         return self.data.global_users
 
     def set_global_users(self, users: dict[str, int]) -> None:
@@ -201,7 +215,11 @@ class ResolverCache:
             Issue type name -> ID mapping, or empty dict if not found.
         """
         cache = self.get_project(project_key)
-        return cache.issue_types if cache else {}
+        if cache and cache.issue_types:
+            api_logger.debug(f"キャッシュヒット: issue_types/{project_key}")
+            record_cache_hit(f"issue_types/{project_key}")
+            return cache.issue_types
+        return {}
 
     def set_issue_types(
         self, project_key: str, project_id: int, issue_types: dict[str, int]
@@ -228,7 +246,11 @@ class ResolverCache:
             Status name -> ID mapping, or empty dict if not found.
         """
         cache = self.get_project(project_key)
-        return cache.statuses if cache else {}
+        if cache and cache.statuses:
+            api_logger.debug(f"キャッシュヒット: statuses/{project_key}")
+            record_cache_hit(f"statuses/{project_key}")
+            return cache.statuses
+        return {}
 
     def set_statuses(
         self, project_key: str, project_id: int, statuses: dict[str, int]
