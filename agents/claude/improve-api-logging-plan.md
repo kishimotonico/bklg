@@ -54,14 +54,57 @@ class OutputLevel(IntEnum):
 
 ### フェーズ1: ログ基盤の構築
 
-#### 1.1 ログモジュールの追加
+#### 1.1 設計方針
+
+- **ノーマルモード**: 画面（stderr）にはログを出力しない
+- **ファイル出力**: すべてのログはファイルに記録
+- **設定ファイル**: ログファイルパスは設定ファイルで指定
+- **XDG準拠**: デフォルトパスは `XDG_STATE_HOME` を使用
+
+#### 1.2 XDG Base Directory 仕様
+
+| 環境変数 | デフォルト | 用途 |
+|----------|-----------|------|
+| `XDG_CONFIG_HOME` | `~/.config` | 設定ファイル |
+| `XDG_STATE_HOME` | `~/.local/state` | 状態データ（ログ等） |
+| `XDG_CACHE_HOME` | `~/.cache` | キャッシュデータ |
+
+**ログファイルのデフォルトパス**:
+```
+$XDG_STATE_HOME/bklg/bklg.log
+→ ~/.local/state/bklg/bklg.log
+```
+
+#### 1.3 設定ファイルの拡張
+
+**変更ファイル**: `src/bklg/config/settings.py`
+
+```toml
+# ~/.config/bklg/config.toml
+[logging]
+# ログファイルのパス（省略時: $XDG_STATE_HOME/bklg/bklg.log）
+file = "~/.local/state/bklg/bklg.log"
+
+# ログレベル: DEBUG, INFO, WARNING, ERROR
+level = "DEBUG"
+
+# ログファイルの最大サイズ（MB）、超過時にローテーション
+max_size_mb = 10
+
+# 保持するローテーションファイル数
+backup_count = 3
+```
+
+#### 1.4 ログモジュールの追加
 
 **新規ファイル**: `src/bklg/utils/logger.py`
 
 ```python
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Optional
-from contextlib import contextmanager
+import os
 
 # bklg専用ロガー
 logger = logging.getLogger("bklg")
@@ -69,36 +112,84 @@ logger = logging.getLogger("bklg")
 # APIリクエスト専用サブロガー
 api_logger = logging.getLogger("bklg.api")
 
-def setup_logging(level: int = logging.WARNING, debug_api: bool = False) -> None:
-    """ロギングの初期化"""
+def get_default_log_path() -> Path:
+    """XDG_STATE_HOMEに基づくデフォルトログパスを取得"""
+    xdg_state_home = os.environ.get("XDG_STATE_HOME")
+    if xdg_state_home:
+        base = Path(xdg_state_home)
+    else:
+        base = Path.home() / ".local" / "state"
+    return base / "bklg" / "bklg.log"
+
+def setup_logging(
+    log_file: Optional[Path] = None,
+    level: str = "DEBUG",
+    max_size_mb: int = 10,
+    backup_count: int = 3,
+    console_output: bool = False,  # デバッグ用: stderrにも出力
+) -> None:
+    """ロギングの初期化（ファイル出力）"""
+
+    # ログファイルパスの決定
+    if log_file is None:
+        log_file = get_default_log_path()
+    else:
+        log_file = Path(log_file).expanduser()
+
+    # ログディレクトリの作成
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+
     # フォーマッタの設定
     formatter = logging.Formatter(
         "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
-        datefmt="%H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    # stderr ハンドラ
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
+    # ファイルハンドラ（ローテーション付き）
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=max_size_mb * 1024 * 1024,
+        backupCount=backup_count,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
 
-    logger.addHandler(handler)
-    logger.setLevel(level)
+    # ルートロガーの設定
+    logger.addHandler(file_handler)
+    logger.setLevel(getattr(logging, level.upper(), logging.DEBUG))
 
-    if debug_api:
-        api_logger.setLevel(logging.DEBUG)
+    # APIロガーはルートロガーの設定を継承
+    api_logger.setLevel(getattr(logging, level.upper(), logging.DEBUG))
+
+    # デバッグ用: コンソール出力（--debug-api 使用時のみ）
+    if console_output:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        api_logger.addHandler(console_handler)
+
+    logger.debug(f"ログ初期化完了: {log_file}")
 ```
 
-#### 1.2 OutputContextとの連携
+#### 1.5 設定モデルの拡張
 
-**変更ファイル**: `src/bklg/cli/context.py`
+**変更ファイル**: `src/bklg/config/settings.py`
 
-| OutputLevel | logging Level | 説明 |
-|-------------|---------------|------|
-| QUIET | WARNING | エラーと警告のみ |
-| NORMAL | INFO | 標準的な情報 |
-| VERBOSE | DEBUG | 詳細なデバッグ情報 |
+```python
+from pydantic import BaseModel
 
-#### 1.3 CLI引数の追加
+class LoggingConfig(BaseModel):
+    """ログ設定"""
+    file: str | None = None  # None時はXDG_STATE_HOMEのデフォルトを使用
+    level: str = "DEBUG"
+    max_size_mb: int = 10
+    backup_count: int = 3
+
+class Settings(BaseModel):
+    # 既存の設定...
+    logging: LoggingConfig = LoggingConfig()
+```
+
+#### 1.6 CLI引数の追加（オプション）
 
 **変更ファイル**: `src/bklg/main.py`
 
@@ -107,10 +198,35 @@ def setup_logging(level: int = logging.WARNING, debug_api: bool = False) -> None
 def main(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
     quiet: bool = typer.Option(False, "--quiet", "-q"),
-    debug_api: bool = typer.Option(False, "--debug-api", help="APIリクエストの詳細ログを出力"),
+    debug_api: bool = typer.Option(False, "--debug-api", help="APIリクエストログをstderrにも出力"),
 ):
+    # ログ初期化
+    from bklg.utils.logger import setup_logging
+    from bklg.config.settings import get_settings
+
+    settings = get_settings()
+    setup_logging(
+        log_file=settings.logging.file,
+        level=settings.logging.level,
+        max_size_mb=settings.logging.max_size_mb,
+        backup_count=settings.logging.backup_count,
+        console_output=debug_api,  # --debug-api の場合のみstderrにも出力
+    )
     ...
 ```
+
+#### 1.7 出力の使い分け
+
+| モード | 画面出力 | ファイル出力 |
+|--------|----------|-------------|
+| ノーマル (`bklg issue list`) | なし | すべてのログ |
+| デバッグ (`--debug-api`) | APIログのみ | すべてのログ |
+| 詳細 (`--verbose`) | Rich出力 | すべてのログ |
+
+**ポイント**:
+- 通常使用時、ユーザーの画面にはログが表示されない
+- 問題発生時は `~/.local/state/bklg/bklg.log` を確認
+- `--debug-api` でリアルタイムにAPIコールを確認可能
 
 ---
 
@@ -340,35 +456,51 @@ def record_call(self, endpoint: str) -> None:
 
 ## 使用例
 
-### 通常使用（変更なし）
+### 通常使用（画面にログ出力なし）
 
 ```bash
 $ bklg issue list --project PROJ
+# 通常の出力のみ（ログは画面に表示されない）
+# ログは ~/.local/state/bklg/bklg.log に記録される
 ```
 
-### デバッグモード
+### ログファイルの確認
+
+```bash
+$ tail -f ~/.local/state/bklg/bklg.log
+[2024-01-15 12:34:56] DEBUG [bklg.api] → GET /api/v2/projects
+[2024-01-15 12:34:56] DEBUG [bklg.api] ← 200 (0.45s)
+[2024-01-15 12:34:56] DEBUG [bklg.api] キャッシュヒット: PROJ (statuses)
+[2024-01-15 12:34:56] DEBUG [bklg.api] → GET /api/v2/issues
+[2024-01-15 12:34:57] DEBUG [bklg.api] ← 200 (0.82s)
+```
+
+### デバッグモード（リアルタイム確認）
 
 ```bash
 $ bklg --debug-api issue list --project PROJ
-[12:34:56] DEBUG [bklg.api] → GET /api/v2/projects
-[12:34:56] DEBUG [bklg.api] ← 200 (0.45s)
-[12:34:56] DEBUG [bklg.api] キャッシュヒット: PROJ (statuses)
-[12:34:56] DEBUG [bklg.api] → GET /api/v2/issues
-[12:34:57] DEBUG [bklg.api] ← 200 (0.82s)
-
-API呼び出し統計:
-  総コール数: 2
-  キャッシュヒット: 1
-  エンドポイント別:
-    /api/v2/projects: 1
-    /api/v2/issues: 1
+# 通常の出力に加え、APIログがstderrにも出力される
+[2024-01-15 12:34:56] DEBUG [bklg.api] → GET /api/v2/projects
+[2024-01-15 12:34:56] DEBUG [bklg.api] ← 200 (0.45s)
+...
 ```
 
-### 詳細モード
+### 設定ファイル例
 
-```bash
-$ bklg --verbose issue list --project PROJ
-# 通常の詳細出力に加え、コマンド終了時に統計を表示
+```toml
+# ~/.config/bklg/config.toml
+[backlog]
+space = "example"
+api_key = "your-api-key"
+
+[logging]
+# カスタムログファイルパス（省略可）
+file = "~/logs/bklg.log"
+# ログレベル: DEBUG, INFO, WARNING, ERROR
+level = "DEBUG"
+# ログローテーション設定
+max_size_mb = 10
+backup_count = 3
 ```
 
 ---
