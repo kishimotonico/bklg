@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,8 @@ from bklg.api.auth import APIKeyAuth, get_auth
 from bklg.api.rate_limit import RateLimitHandler
 from bklg.config.settings import Settings, get_settings
 from bklg.models.common import BacklogErrorResponse, ErrorCode
+from bklg.utils.api_stats import record_api_call
+from bklg.utils.logger import api_logger
 
 
 class BacklogAPIError(Exception):
@@ -148,6 +151,11 @@ class BacklogClient:
         """
         url = endpoint.lstrip("/")
 
+        # APIコールをログに記録
+        api_logger.debug(f"→ {method} /{url}")
+        record_api_call(f"/{url}")
+        start_time = time.time()
+
         for attempt in range(self.rate_limit_handler.max_retries + 1):
             if json_body is not None:
                 response = self.client.request(
@@ -164,18 +172,23 @@ class BacklogClient:
                     data=data,
                 )
 
+            elapsed = time.time() - start_time
             self.rate_limit_handler.update_from_response(response)
 
             if response.status_code == 429:
+                api_logger.warning(f"← 429 Rate Limited ({elapsed:.2f}s)")
                 if self.rate_limit_handler.should_retry(response, attempt):
                     delay = self.rate_limit_handler.get_retry_delay(response, attempt)
                     self.rate_limit_handler.wait_for_retry(delay)
+                    start_time = time.time()  # リトライ用にリセット
                     continue
                 raise BacklogAPIError.from_response(response)
 
             if response.status_code >= 400:
+                api_logger.error(f"← {response.status_code} Error ({elapsed:.2f}s)")
                 raise BacklogAPIError.from_response(response)
 
+            api_logger.debug(f"← {response.status_code} ({elapsed:.2f}s)")
             return response
 
         raise BacklogAPIError(

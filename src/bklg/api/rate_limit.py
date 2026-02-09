@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from rich.console import Console
 
 from bklg.models.common import RateLimitInfo
+from bklg.utils.logger import api_logger
 
 if TYPE_CHECKING:
     import httpx
@@ -75,6 +76,15 @@ class RateLimitHandler:
 
     def wait_for_retry(self, delay: float) -> None:
         """Wait before retrying with user feedback."""
+        # レート制限情報をログに記録
+        if self._last_rate_limit:
+            api_logger.warning(
+                f"レート制限検知: {self._last_rate_limit.remaining}/{self._last_rate_limit.limit} "
+                f"(リセット: {delay:.0f}秒後)"
+            )
+        else:
+            api_logger.warning(f"レート制限: {delay:.0f}秒待機")
+
         if delay > 10:
             console.print(
                 f"[yellow]Rate limit reached. Waiting {delay:.0f} seconds...[/yellow]"

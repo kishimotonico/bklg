@@ -16,6 +16,8 @@ from bklg.cli.space import app as space_app
 from bklg.cli.user import app as user_app
 from bklg.cli.watch import app as watch_app
 from bklg.cli.wiki import app as wiki_app
+from bklg.config.settings import get_settings
+from bklg.utils.logger import setup_logging
 
 app = typer.Typer(
     name="bklg",
@@ -44,8 +46,22 @@ def callback(
         bool,
         typer.Option("--verbose", "-v", help="Verbose output"),
     ] = False,
+    debug_api: Annotated[
+        bool,
+        typer.Option("--debug-api", help="APIリクエストログをstderrにも出力"),
+    ] = False,
 ) -> None:
     """Backlog CLI - A command-line interface for Backlog."""
+    # ログ初期化
+    settings = get_settings()
+    setup_logging(
+        log_file=settings.logging.file,
+        level=settings.logging.level,
+        max_size_mb=settings.logging.max_size_mb,
+        backup_count=settings.logging.backup_count,
+        console_output=debug_api,
+    )
+
     OutputContext.set_level(quiet=quiet, verbose=verbose)
 
 

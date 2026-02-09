@@ -20,6 +20,27 @@ import tomli_w
 from pydantic import BaseModel, Field
 
 
+class LoggingConfig(BaseModel):
+    """ログ設定."""
+
+    file: str | None = Field(
+        default=None,
+        description="ログファイルパス（省略時: $XDG_STATE_HOME/bklg/bklg.log）",
+    )
+    level: str = Field(
+        default="DEBUG",
+        description="ログレベル (DEBUG, INFO, WARNING, ERROR)",
+    )
+    max_size_mb: int = Field(
+        default=10,
+        description="ログファイルの最大サイズ（MB）",
+    )
+    backup_count: int = Field(
+        default=3,
+        description="ローテーションで保持するファイル数",
+    )
+
+
 def get_config_dir() -> Path:
     """Get the configuration directory path."""
     config_dir = Path.home() / ".config" / "bklg"
@@ -53,6 +74,10 @@ class Settings(BaseModel):
     default_project: str | None = Field(
         default=None,
         description="Default project key",
+    )
+    logging: LoggingConfig = Field(
+        default_factory=LoggingConfig,
+        description="ログ設定",
     )
 
     @classmethod
