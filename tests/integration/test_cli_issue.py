@@ -367,3 +367,257 @@ class TestOpenIssueCommand:
 
         assert result.exit_code == 1
         assert "Not logged in" in result.output
+
+
+class TestExportIssueCommand:
+    """Tests for issue export command."""
+
+    def test_export_basic(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+        tmp_path: Path,
+    ) -> None:
+        """Test basic export with no comments."""
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.side_effect = [
+                sample_issue,  # Issue
+                [],  # Comments (1ページ目・0件)
+            ]
+
+            result = runner.invoke(
+                app, ["export", "TEST-1", "--output-dir", str(tmp_path)]
+            )
+
+            assert result.exit_code == 0
+            assert "Exported TEST-1" in result.output
+            assert (tmp_path / "issue.md").exists()
+
+    def test_export_no_comments(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+        tmp_path: Path,
+    ) -> None:
+        """Test export with --no-comments skips comment API call."""
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.return_value = sample_issue
+
+            result = runner.invoke(
+                app, ["export", "TEST-1", "--output-dir", str(tmp_path), "--no-comments"]
+            )
+
+            assert result.exit_code == 0
+            # コメント取得の GET が呼ばれないこと（課題取得のみ）
+            assert mock_instance.get.call_count == 1
+
+    def test_export_with_comments(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+        sample_comment: dict[str, Any],
+        tmp_path: Path,
+    ) -> None:
+        """Test export with comments included in issue.md."""
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.side_effect = [
+                sample_issue,       # Issue
+                [sample_comment],   # Comments (1件・終了)
+            ]
+
+            result = runner.invoke(
+                app, ["export", "TEST-1", "--output-dir", str(tmp_path)]
+            )
+
+            assert result.exit_code == 0
+            content = (tmp_path / "issue.md").read_text(encoding="utf-8")
+            assert "## Comments (1)" in content
+            assert "This is a test comment." in content
+
+    def test_export_comment_pagination(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+        sample_comment: dict[str, Any],
+        tmp_path: Path,
+    ) -> None:
+        """Test export with comment pagination (100件の場合は次ページを取得)。"""
+        # 100件のコメントダミーを作成
+        first_page = [
+            {**sample_comment, "id": i}
+            for i in range(1, 101)
+        ]
+        second_page = [{**sample_comment, "id": 101}]
+
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.side_effect = [
+                sample_issue,   # Issue
+                first_page,     # Comments page 1 (100件)
+                second_page,    # Comments page 2 (1件・終了)
+            ]
+
+            result = runner.invoke(
+                app, ["export", "TEST-1", "--output-dir", str(tmp_path)]
+            )
+
+            assert result.exit_code == 0
+            # 3回 GET が呼ばれること（課題 + コメント2ページ）
+            assert mock_instance.get.call_count == 3
+            content = (tmp_path / "issue.md").read_text(encoding="utf-8")
+            assert "## Comments (101)" in content
+
+    def test_export_with_attachments(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+        sample_attachment: dict[str, Any],
+        tmp_path: Path,
+    ) -> None:
+        """Test export downloads attachments."""
+        issue_with_attachment = {**sample_issue, "attachments": [sample_attachment]}
+
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.side_effect = [
+                issue_with_attachment,  # Issue
+                [],                     # Comments
+            ]
+            mock_instance.download_file.return_value = (b"file content", "test_file.pdf")
+
+            result = runner.invoke(
+                app, ["export", "TEST-1", "--output-dir", str(tmp_path)]
+            )
+
+            assert result.exit_code == 0
+            mock_instance.download_file.assert_called_once()
+            content = (tmp_path / "issue.md").read_text(encoding="utf-8")
+            assert "## Attachments" in content
+            assert "Files saved to: ./attachments/" in content
+
+    def test_export_no_attachments_flag(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+        sample_attachment: dict[str, Any],
+        tmp_path: Path,
+    ) -> None:
+        """Test export with --no-attachments skips download."""
+        issue_with_attachment = {**sample_issue, "attachments": [sample_attachment]}
+
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.side_effect = [
+                issue_with_attachment,  # Issue
+                [],                     # Comments
+            ]
+
+            result = runner.invoke(
+                app,
+                ["export", "TEST-1", "--output-dir", str(tmp_path), "--no-attachments"],
+            )
+
+            assert result.exit_code == 0
+            mock_instance.download_file.assert_not_called()
+            # Attachments セクションは表示されるがダウンロード文言はない
+            content = (tmp_path / "issue.md").read_text(encoding="utf-8")
+            assert "## Attachments" in content
+            assert "Files saved to: ./attachments/" not in content
+
+    def test_export_default_output_dir(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        sample_issue: dict[str, Any],
+    ) -> None:
+        """Test export uses /tmp/bklg/<KEY> as default output directory."""
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+
+            mock_instance.get.side_effect = [
+                sample_issue,  # Issue
+                [],            # Comments
+            ]
+
+            result = runner.invoke(app, ["export", "TEST-1"])
+
+            assert result.exit_code == 0
+            default_dir = Path("/tmp/bklg/TEST-1")
+            assert default_dir.exists()
+            assert (default_dir / "issue.md").exists()
+
+    def test_export_issue_not_found(
+        self,
+        runner: CliRunner,
+        configured_settings: Settings,
+        tmp_path: Path,
+    ) -> None:
+        """Test export when issue is not found."""
+        from bklg.api.client import BacklogAPIError
+        from bklg.models.common import ErrorCode
+
+        with patch("bklg.cli.issue.BacklogClient") as mock_client:
+            mock_instance = MagicMock()
+            mock_client.return_value = mock_instance
+            mock_instance.__enter__.return_value = mock_instance
+            mock_instance.__exit__.return_value = None
+            mock_instance.get.side_effect = BacklogAPIError(
+                "Not found", code=ErrorCode.NO_RESOURCE_ERROR
+            )
+
+            result = runner.invoke(
+                app, ["export", "NONEXISTENT-999", "--output-dir", str(tmp_path)]
+            )
+
+            assert result.exit_code == 1
+            assert "not found" in result.output
+
+    def test_export_not_logged_in(
+        self,
+        runner: CliRunner,
+        tmp_config_dir: Path,
+        tmp_path: Path,
+    ) -> None:
+        """Test export when not logged in."""
+        result = runner.invoke(
+            app, ["export", "TEST-1", "--output-dir", str(tmp_path)]
+        )
+
+        assert result.exit_code == 1
+        assert "Not logged in" in result.output

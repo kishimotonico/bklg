@@ -21,6 +21,7 @@ from bklg.resolver.priority import PriorityResolver
 from bklg.resolver.project import ProjectResolver
 from bklg.resolver.status import StatusResolver
 from bklg.resolver.user import UserResolver
+from bklg.utils.exporter import IssueExporter
 from bklg.utils.formatter import IssueFormatter
 
 app = typer.Typer(help="Issue commands")
@@ -1046,6 +1047,118 @@ def delete_attachment(
     except BacklogAPIError as e:
         if e.is_not_found():
             err_console.print("[red]Attachment not found.[/red]")
+        else:
+            err_console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+def _fetch_all_comments(client: BacklogClient, issue_key: str) -> list[Comment]:
+    """コメントをページネーションで全件取得するヘルパー。
+
+    100件ずつ昇順で取得し、100件返ってきた場合は次ページを取得する。
+    """
+    comments: list[Comment] = []
+    min_id: int | None = None
+
+    while True:
+        params: dict[str, int | str] = {"count": 100, "order": "asc"}
+        if min_id is not None:
+            params["minId"] = min_id
+
+        data = client.get(f"/issues/{issue_key}/comments", params=params)
+        batch = [Comment.model_validate(c) for c in data]  # type: ignore[union-attr]
+        comments.extend(batch)
+
+        if len(batch) < 100:
+            break
+
+        # 次ページは最後のコメントIDの次から取得
+        min_id = batch[-1].id + 1
+
+    return comments
+
+
+@app.command("export")
+def export_issue(
+    issue_id: Annotated[
+        str,
+        typer.Argument(help="Issue key, ID, or URL"),
+    ],
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", "-o", help="Output directory (default: /tmp/bklg/<KEY>)"),
+    ] = None,
+    no_attachments: Annotated[
+        bool,
+        typer.Option("--no-attachments", help="Skip downloading attachments"),
+    ] = False,
+    no_comments: Annotated[
+        bool,
+        typer.Option("--no-comments", help="Skip fetching comments"),
+    ] = False,
+) -> None:
+    """Export issue to local directory as Markdown."""
+    settings = get_settings()
+    if not settings.is_configured:
+        err_console.print("[red]Not logged in.[/red]")
+        err_console.print("Run 'bklg auth login' to authenticate.")
+        raise typer.Exit(1)
+
+    issue_key = parse_issue_identifier(issue_id)
+    target_dir = output_dir or Path("/tmp/bklg") / issue_key
+
+    try:
+        with BacklogClient(settings=settings) as client:
+            # 課題取得（添付ファイル一覧も含まれる）
+            data = client.get(f"/issues/{issue_key}")
+            issue = Issue.model_validate(data)
+
+            # コメント全件取得
+            comments: list[Comment] = []
+            if not no_comments:
+                comments = _fetch_all_comments(client, issue_key)
+
+            # 出力ディレクトリを作成
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            # 添付ファイルのダウンロード
+            attachments = [Attachment.model_validate(a) for a in issue.attachments]
+            attachments_downloaded = False
+            if not no_attachments and attachments:
+                attachment_dir = target_dir / "attachments"
+                attachment_dir.mkdir(exist_ok=True)
+                for att in attachments:
+                    client.download_file(
+                        f"/issues/{issue_key}/attachments/{att.id}",
+                        output_path=attachment_dir,
+                    )
+                attachments_downloaded = True
+
+        # issue.md を生成・書き出し
+        exporter = IssueExporter(space_url=settings.space_url)
+        exporter.export(
+            issue=issue,
+            comments=comments,
+            attachments=attachments,
+            output_dir=target_dir,
+            attachments_downloaded=attachments_downloaded,
+        )
+
+        # 結果サマリを表示
+        console.print(f"[green]Exported {issue_key} to {target_dir}[/green]")
+        console.print(f"  issue.md: {target_dir / 'issue.md'}")
+        if attachments:
+            if attachments_downloaded:
+                console.print(
+                    f"  attachments: {len(attachments)} file(s) in {target_dir / 'attachments'}"
+                )
+            else:
+                console.print(f"  attachments: skipped ({len(attachments)} file(s))")
+        console.print(f"  comments: {len(comments)}")
+
+    except BacklogAPIError as e:
+        if e.is_not_found():
+            err_console.print(f"[red]Issue '{issue_key}' not found.[/red]")
         else:
             err_console.print(f"[red]API Error: {e}[/red]")
         raise typer.Exit(1) from e
