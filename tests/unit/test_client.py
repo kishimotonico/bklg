@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from bklg.api.client import BacklogAPIError, BacklogClient
+from bklg.api.client import BacklogAPIError, BacklogClient, _parse_filename_from_content_disposition
 from bklg.config.settings import Settings
 from bklg.models.common import ErrorCode
 
@@ -26,6 +26,43 @@ def settings() -> Settings:
 def client(settings: Settings) -> BacklogClient:
     """Create test client."""
     return BacklogClient(settings=settings)
+
+
+class TestParseFilenameFromContentDisposition:
+    """_parse_filename_from_content_disposition 関数のテスト。"""
+
+    def test_no_header(self) -> None:
+        assert _parse_filename_from_content_disposition("") == "download"
+
+    def test_plain_filename(self) -> None:
+        assert _parse_filename_from_content_disposition(
+            'attachment; filename="report.pdf"'
+        ) == "report.pdf"
+
+    def test_plain_filename_without_quotes(self) -> None:
+        assert _parse_filename_from_content_disposition(
+            "attachment; filename=report.pdf"
+        ) == "report.pdf"
+
+    def test_rfc5987_utf8(self) -> None:
+        # UTF-8 でエンコードされた日本語ファイル名
+        assert _parse_filename_from_content_disposition(
+            "attachment; filename*=UTF-8''%E3%83%86%E3%82%B9%E3%83%88.pdf"
+        ) == "テスト.pdf"
+
+    def test_rfc5987_takes_priority_over_plain(self) -> None:
+        # filename* が filename より優先されること
+        assert _parse_filename_from_content_disposition(
+            "attachment; filename=\"download\"; filename*=UTF-8''%E3%83%86%E3%82%B9%E3%83%88.pdf"
+        ) == "テスト.pdf"
+
+    def test_rfc5987_ascii(self) -> None:
+        assert _parse_filename_from_content_disposition(
+            "attachment; filename*=UTF-8''report.pdf"
+        ) == "report.pdf"
+
+    def test_no_filename_in_header(self) -> None:
+        assert _parse_filename_from_content_disposition("attachment") == "download"
 
 
 class TestBacklogAPIError:

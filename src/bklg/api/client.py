@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 
@@ -335,14 +337,9 @@ class BacklogClient:
         if response.status_code >= 400:
             raise BacklogAPIError.from_response(response)
 
-        # Try to get filename from Content-Disposition header
-        filename = "download"
+        # Content-Disposition ヘッダーからファイル名を取得
         content_disposition = response.headers.get("content-disposition", "")
-        if "filename=" in content_disposition:
-            # Parse filename from header
-            parts = content_disposition.split("filename=")
-            if len(parts) > 1:
-                filename = parts[1].strip('"').strip("'")
+        filename = _parse_filename_from_content_disposition(content_disposition)
 
         content = response.content
 
@@ -352,3 +349,35 @@ class BacklogClient:
             output_path.write_bytes(content)
 
         return content, filename
+
+
+def _parse_filename_from_content_disposition(content_disposition: str) -> str:
+    """Content-Dispositionヘッダーからファイル名を解析する。
+
+    RFC 5987 形式 (filename*=UTF-8''...) を優先し、
+    なければ通常の filename= を使用する。
+    どちらも取得できない場合は "download" を返す。
+    """
+    # RFC 5987: filename*=UTF-8''URL%E3%82%A8%E3%83%B3%E3%82%B3%E3%83%BC%E3%83%89
+    match = re.search(r"filename\*\s*=\s*([^;]+)", content_disposition, re.IGNORECASE)
+    if match:
+        value = match.group(1).strip().strip("'\"")
+        # "UTF-8''encoded" 形式のデコード
+        rfc5987 = re.match(r"^([^']*)'[^']*'(.+)$", value)
+        if rfc5987:
+            encoding = rfc5987.group(1) or "utf-8"
+            try:
+                return Path(unquote(rfc5987.group(2), encoding=encoding)).name
+            except LookupError:
+                return Path(unquote(rfc5987.group(2), encoding="utf-8")).name
+        return Path(unquote(value)).name
+
+    # 通常の filename="foo.txt" または filename=foo.txt
+    match = re.search(r'filename\s*=\s*"([^"]+)"', content_disposition, re.IGNORECASE)
+    if match:
+        return Path(match.group(1)).name
+    match = re.search(r"filename\s*=\s*([^\s;]+)", content_disposition, re.IGNORECASE)
+    if match:
+        return Path(match.group(1)).name
+
+    return "download"
